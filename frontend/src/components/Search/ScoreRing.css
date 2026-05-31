@@ -1,0 +1,40 @@
+.score-ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-ring-bg {
+  fill: none;
+  stroke: var(--slate-100);
+}
+
+.score-ring-progress {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.score-ring-text {
+  position: absolute;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  color: var(--navy-900);
+}
+
+.score-text-sm { font-size: 12px; }
+.score-text-md { font-size: 14px; }
+.score-text-lg { font-size: 18px; font-weight: 600; }
+
+.score-green .score-ring-progress { stroke: var(--success-600); }
+.score-green .score-ring-text { color: var(--success-600); }
+
+.score-amber .score-ring-progress { stroke: var(--amber-500); }
+.score-amber .score-ring-text { color: var(--amber-500); }
+
+.score-yellow .score-ring-progress { stroke: #EAB308; }
+.score-yellow .score-ring-text { color: #EAB308; }
+
+.score-gray .score-ring-progress { stroke: var(--slate-500); }
+.score-gray .score-ring-text { color: var(--slate-500); }

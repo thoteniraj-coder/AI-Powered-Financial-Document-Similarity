@@ -1,0 +1,139 @@
+.alerts-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.alerts-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
+.filter-tabs {
+  display: flex;
+  background-color: var(--slate-100);
+  padding: 4px;
+  border-radius: var(--radius-md);
+}
+
+.filter-tab {
+  padding: var(--space-2) var(--space-4);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--slate-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.filter-tab:hover {
+  color: var(--navy-800);
+}
+
+.filter-tab.active {
+  background-color: white;
+  color: var(--navy-900);
+  box-shadow: var(--shadow-xs);
+}
+
+.alerts-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  background-color: white;
+}
+
+.alerts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.alert-card {
+  display: flex;
+  background-color: white;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--slate-200);
+  border-left: 4px solid transparent;
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+  gap: var(--space-5);
+}
+
+.alert-card.severity-high { border-left-color: var(--danger-500); }
+.alert-card.severity-medium { border-left-color: var(--warning-500); }
+.alert-card.severity-low { border-left-color: var(--info-500); }
+
+.alert-icon-col {
+  padding-top: var(--space-1);
+}
+
+.text-danger-600 { color: var(--danger-600); }
+.text-warning-600 { color: var(--warning-600); }
+.text-info-600 { color: var(--info-600); }
+
+.alert-content-col {
+  flex: 1;
+}
+
+.alert-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.alert-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.alert-badge.type-duplicate { background-color: var(--info-100); color: var(--info-700); }
+.alert-badge.type-fraud { background-color: var(--danger-100); color: var(--danger-700); }
+.alert-badge.type-anomaly { background-color: var(--warning-100); color: var(--warning-700); }
+
+.alert-date {
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.alert-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--navy-900);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.alert-desc {
+  font-size: 14px;
+  color: var(--slate-700);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.alert-actions-col {
+  width: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.w-full { width: 100%; }
+.mb-2 { margin-bottom: var(--space-2); }
+.mt-4 { margin-top: var(--space-4); }
+
+.resolve-prompt {
+  margin-bottom: var(--space-4);
+  color: var(--slate-700);
+}
+
+.p-2 { padding: var(--space-2); }
+.border { border: 1px solid var(--slate-300); }
+.rounded { border-radius: var(--radius-md); }

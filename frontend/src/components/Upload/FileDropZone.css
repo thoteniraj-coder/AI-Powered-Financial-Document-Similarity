@@ -1,0 +1,79 @@
+.file-drop-zone {
+  border: 2px dashed var(--slate-300);
+  border-radius: var(--radius-lg);
+  background-color: var(--navy-50);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-standard);
+  outline: none;
+}
+
+.file-drop-zone:hover, .file-drop-zone:focus-visible {
+  border-color: var(--navy-500);
+  background-color: var(--navy-100);
+}
+
+.file-drop-zone:focus-visible {
+  box-shadow: 0 0 0 4px rgba(46, 72, 153, 0.2);
+}
+
+.file-drop-zone.dragging {
+  border-color: var(--navy-600);
+  background-color: var(--navy-100);
+  transform: scale(1.02);
+  box-shadow: var(--shadow-md);
+}
+
+.file-drop-zone.has-error {
+  border-color: var(--danger-600);
+  background-color: var(--danger-100);
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.drop-icon-container {
+  background-color: white;
+  border-radius: var(--radius-full);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-4);
+  color: var(--navy-600);
+}
+
+.drop-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--navy-900);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.drop-subtitle {
+  color: var(--slate-600);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.drop-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.dot-separator {
+  color: var(--slate-300);
+}
+
+.drop-error {
+  margin-top: var(--space-4);
+  color: var(--danger-600);
+  font-weight: 500;
+  font-size: 14px;
+}

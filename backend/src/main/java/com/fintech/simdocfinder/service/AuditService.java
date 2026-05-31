@@ -1,0 +1,39 @@
+package com.fintech.simdocfinder.service;
+
+import com.fintech.simdocfinder.model.entity.AuditLog;
+import com.fintech.simdocfinder.model.entity.User;
+import com.fintech.simdocfinder.repository.AuditLogRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class AuditService {
+
+    private final AuditLogRepository auditLogRepository;
+
+    @Transactional
+    public void logAction(User user, String action, String entityType, String entityId, String payload, String ipAddress) {
+        try {
+            AuditLog auditLog = AuditLog.builder()
+                    .user(user)
+                    .action(action)
+                    .entityType(entityType)
+                    .entityId(entityId)
+                    .payload(payload)
+                    .ipAddress(ipAddress)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            auditLogRepository.save(auditLog);
+            log.debug("Audit log created: {} by user {}", action, user != null ? user.getId() : "system");
+        } catch (Exception e) {
+            log.error("Failed to save audit log", e);
+        }
+    }
+}

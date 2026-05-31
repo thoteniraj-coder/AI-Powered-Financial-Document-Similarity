@@ -1,0 +1,213 @@
+.search-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.search-layout {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+.search-main {
+  flex: 1;
+}
+
+.search-sidebar {
+  width: 320px;
+}
+
+.search-card, .settings-card {
+  background-color: white;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--slate-200);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.search-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--slate-200);
+  background-color: var(--slate-50);
+}
+
+.search-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  color: var(--slate-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.search-tab:hover {
+  color: var(--navy-800);
+  background-color: var(--slate-100);
+}
+
+.search-tab.active {
+  color: var(--navy-600);
+  border-bottom-color: var(--navy-600);
+  background-color: white;
+}
+
+.search-content {
+  padding: var(--space-6);
+}
+
+.search-textarea {
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 200px;
+}
+
+.search-textarea:focus {
+  outline: none;
+  border-color: var(--navy-500);
+  box-shadow: 0 0 0 3px rgba(46, 72, 153, 0.1);
+}
+
+.document-selector {
+  position: relative;
+  margin-bottom: var(--space-6);
+}
+
+.selector-icon {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--slate-400);
+}
+
+.selector-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-10);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+}
+
+.selector-input:focus {
+  outline: none;
+  border-color: var(--navy-500);
+  box-shadow: 0 0 0 3px rgba(46, 72, 153, 0.1);
+}
+
+.recent-docs-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate-500);
+  margin-bottom: var(--space-3);
+}
+
+.recent-doc-item {
+  padding: var(--space-3);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-2);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.recent-doc-item:hover {
+  background-color: var(--slate-50);
+  border-color: var(--slate-300);
+}
+
+.settings-card {
+  padding: var(--space-5);
+}
+
+.settings-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--navy-900);
+  margin: 0 0 var(--space-5) 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--slate-100);
+}
+
+.setting-group {
+  margin-bottom: var(--space-6);
+}
+
+.setting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.setting-header label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--navy-800);
+}
+
+.setting-value {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--navy-600);
+  background-color: var(--navy-50);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.threshold-slider {
+  width: 100%;
+  accent-color: var(--navy-600);
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--slate-500);
+  margin-top: var(--space-1);
+}
+
+.topk-select {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  margin-top: var(--space-2);
+}
+
+.search-action {
+  margin-top: var(--space-8);
+}
+
+.search-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .search-layout {
+    flex-direction: column;
+  }
+  .search-sidebar {
+    width: 100%;
+  }
+}

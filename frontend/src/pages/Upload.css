@@ -1,0 +1,210 @@
+.upload-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: var(--space-8);
+}
+
+.page-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  color: var(--navy-900);
+  margin: 0 0 var(--space-2) 0;
+  letter-spacing: -0.02em;
+}
+
+.page-subtitle {
+  color: var(--slate-600);
+  font-size: 16px;
+  margin: 0;
+}
+
+.upload-container {
+  background-color: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-8);
+  border: 1px solid var(--slate-200);
+}
+
+.file-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  background-color: var(--slate-50);
+  margin-bottom: var(--space-6);
+}
+
+.file-preview-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.file-icon-bg {
+  background-color: var(--navy-100);
+  color: var(--navy-600);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-name {
+  font-weight: 600;
+  color: var(--navy-900);
+  margin-bottom: var(--space-1);
+}
+
+.file-size {
+  font-size: 12px;
+  color: var(--slate-500);
+}
+
+.remove-file-btn {
+  background: none;
+  border: none;
+  color: var(--slate-400);
+  cursor: pointer;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.remove-file-btn:hover {
+  color: var(--danger-600);
+  background-color: var(--danger-50);
+}
+
+/* Metadata section */
+.metadata-section {
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.metadata-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-4);
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 600;
+  color: var(--navy-800);
+  transition: background-color var(--transition-fast);
+}
+
+.metadata-toggle:hover {
+  background-color: var(--slate-50);
+}
+
+.metadata-form {
+  padding: var(--space-5);
+  border-top: 1px solid var(--slate-200);
+  background-color: var(--slate-50);
+}
+
+.form-group {
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy-800);
+  margin-bottom: var(--space-2);
+}
+
+.form-group input, .form-group select {
+  padding: var(--space-3);
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--navy-500);
+  box-shadow: 0 0 0 3px rgba(46, 72, 153, 0.1);
+}
+
+.form-row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.form-group.half {
+  flex: 1;
+}
+
+.upload-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--slate-200);
+}
+
+/* Processing and Success States */
+.processing-state, .success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-8) 0;
+}
+
+.state-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--navy-900);
+  margin: 0 0 var(--space-2) 0;
+}
+
+.state-subtitle {
+  color: var(--slate-600);
+  margin: 0 0 var(--space-8) 0;
+}
+
+.success-icon-container {
+  color: var(--success-600);
+  margin-bottom: var(--space-4);
+  animation: scale-in var(--transition-deliberate);
+}
+
+.success-actions {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+@keyframes scale-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .success-icon-container {
+    animation: none;
+  }
+}
