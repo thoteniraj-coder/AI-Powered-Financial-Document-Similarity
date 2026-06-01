@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AppLayout } from './components/Layout/AppLayout';
 
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -20,16 +21,21 @@ export const router = createBrowserRouter([
   { 
     element: <ProtectedRoute />, 
     children: [
-      { path: "/dashboard", element: <Dashboard /> },
-      { path: "/upload", element: <Upload /> },
-      { path: "/search", element: <Search /> },
-      { path: "/search/results", element: <SearchResults /> },
-      { path: "/documents", element: <Documents /> },
-      { path: "/documents/compare", element: <DocumentComparison /> },
-      { path: "/documents/:id", element: <DocumentDetail /> },
-      { path: "/alerts", element: <Alerts /> },
-      { path: "/audit", element: <AuditTrail /> },
-      { path: "/settings", element: <Settings /> }
+      {
+        element: <AppLayout />,
+        children: [
+          { path: "/dashboard", element: <Dashboard /> },
+          { path: "/upload", element: <Upload /> },
+          { path: "/search", element: <Search /> },
+          { path: "/search/results", element: <SearchResults /> },
+          { path: "/documents", element: <Documents /> },
+          { path: "/documents/compare", element: <DocumentComparison /> },
+          { path: "/documents/:id", element: <DocumentDetail /> },
+          { path: "/alerts", element: <Alerts /> },
+          { path: "/audit", element: <AuditTrail /> },
+          { path: "/settings", element: <Settings /> }
+        ]
+      }
     ]
   },
   { path: "*", element: <Navigate to="/dashboard" replace /> }
