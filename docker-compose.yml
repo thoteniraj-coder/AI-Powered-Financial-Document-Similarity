@@ -70,7 +70,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-fdsf_user}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-fdsf_secret_2026}
       QDRANT_HOST: qdrant
-      QDRANT_PORT: 6333
+      QDRANT_PORT: 6334
       EMBEDDING_SERVICE_URL: http://embedding-service:5000
       JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-change-in-production-2026}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
