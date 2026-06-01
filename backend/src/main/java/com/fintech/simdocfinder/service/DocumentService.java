@@ -209,7 +209,7 @@ public class DocumentService {
                 .totalAmount(meta.getTotalAmount())
                 .currency(meta.getCurrency())
                 .chunksCount(chunksCount)
-                .uploadedBy(doc.getUploadedBy() != null ? doc.getUploadedBy().getUsername() : null)
+                .uploadedBy(doc.getUploadedBy() != null ? doc.getUploadedBy().getEmail() : null)
                 .uploadedAt(doc.getCreatedAt())
                 .build();
     }

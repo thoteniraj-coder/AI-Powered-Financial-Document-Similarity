@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.List;
 import java.util.UUID;
 import java.util.Map;
@@ -66,8 +66,12 @@ public class QdrantService {
                 if (metadata.get("invoice_number") != null) payload.put("invoice_number", value(metadata.get("invoice_number").toString()));
 
                 points.add(PointStruct.newBuilder()
-                        .setId(id(pointId))
-                        .addAllVectors(toList(embeddings.get(i)))
+                        .setId(id(UUID.fromString(pointId)))
+                        .setVectors(io.qdrant.client.grpc.Points.Vectors.newBuilder()
+                                .setVector(io.qdrant.client.grpc.Points.Vector.newBuilder()
+                                        .addAllData(toList(embeddings.get(i)))
+                                        .build())
+                                .build())
                         .putAllPayload(payload)
                         .build());
             }

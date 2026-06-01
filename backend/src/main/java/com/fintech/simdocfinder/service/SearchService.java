@@ -116,7 +116,6 @@ public class SearchService {
         SearchLog logEntity = SearchLog.builder()
                 .searchedBy(user)
                 .searchedAt(LocalDateTime.now()).resultCount(results.size()).thresholdUsed(java.math.BigDecimal.valueOf(0.70))
-                .createdAt(LocalDateTime.now())
                 .build();
         logEntity = searchLogRepository.save(logEntity);
 
@@ -125,7 +124,7 @@ public class SearchService {
             if (doc != null) {
                 SearchResult sr = SearchResult.builder()
                         .searchLog(logEntity)
-                        .document(doc)
+                        .matchedDocument(doc)
                         .similarityScore(java.math.BigDecimal.valueOf(result.getSimilarityScore()))
                         .rank(result.getRank())
                         .matchedSnippet(result.getMatchedSnippet())

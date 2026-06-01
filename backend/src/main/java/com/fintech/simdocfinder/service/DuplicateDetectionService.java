@@ -58,7 +58,6 @@ public class DuplicateDetectionService {
                 .description(desc)
                 .status("NEW")
                 .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
                 .build();
         alertRepository.save(alert);
         // Note: Missing mapping for Alert <-> Document in Alert class (alert_documents), so skipping link for now

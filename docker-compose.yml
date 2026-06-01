@@ -32,11 +32,6 @@ services:
       - "6334:6334"    # gRPC
     volumes:
       - qdrant_data:/qdrant/storage
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     restart: unless-stopped
 
   # ──────────────────────────────────────────────
@@ -48,7 +43,7 @@ services:
       dockerfile: Dockerfile
     container_name: fdsf-embedding
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       MODEL_NAME: ${EMBEDDING_MODEL:-all-MiniLM-L6-v2}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -80,13 +75,14 @@ services:
       JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-change-in-production-2026}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
       FILE_STORAGE_PATH: /data/uploads
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
     volumes:
       - upload_data:/data/uploads
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
-        condition: service_healthy
+        condition: service_started
       embedding-service:
         condition: service_healthy
     healthcheck:

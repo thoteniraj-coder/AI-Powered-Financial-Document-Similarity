@@ -40,7 +40,7 @@ public class DocumentController {
             userIdStr = ((User) authentication.getPrincipal()).getId().toString();
         } else if (authentication != null && authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.User) {
             String username = ((org.springframework.security.core.userdetails.User) authentication.getPrincipal()).getUsername();
-            User user = userRepository.findByUsername(username).orElse(null);
+            User user = userRepository.findByEmail(username).orElse(null);
             if (user != null) userIdStr = user.getId().toString();
         }
 
@@ -66,7 +66,7 @@ public class DocumentController {
         User user = null;
         if (authentication != null) {
             String username = authentication.getName();
-            user = userRepository.findByUsername(username).orElse(null);
+            user = userRepository.findByEmail(username).orElse(null);
         }
         documentService.softDeleteDocument(id, user, request.getRemoteAddr());
         return ResponseEntity.noContent().build();
@@ -82,7 +82,7 @@ public class DocumentController {
         User user = null;
         if (authentication != null) {
             String username = authentication.getName();
-            user = userRepository.findByUsername(username).orElse(null);
+            user = userRepository.findByEmail(username).orElse(null);
         }
         return ResponseEntity.ok(searchService.searchSimilar(queryFile, searchRequest, user, request.getRemoteAddr()));
     }

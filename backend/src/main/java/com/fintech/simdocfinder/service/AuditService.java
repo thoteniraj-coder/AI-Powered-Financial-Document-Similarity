@@ -21,7 +21,7 @@ public class AuditService {
     public void logAction(User user, String action, String entityType, String entityId, String payload, String ipAddress) {
         try {
             AuditLog auditLog = AuditLog.builder()
-                    .user(user)
+                    .actorUserId(user != null ? user.getId() : null)
                     .action(action)
                     .entityType(entityType)
                     .entityId(entityId)
