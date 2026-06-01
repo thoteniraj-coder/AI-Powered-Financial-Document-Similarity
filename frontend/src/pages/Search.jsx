@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, FileText, Upload, Database } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import FileDropZone from '../components/Upload/FileDropZone';
 import { Button } from '../components/common/Button';
 import './Search.css';
@@ -23,7 +23,7 @@ const Search = () => {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="search-page">
         <div className="page-header">
           <h1 className="page-title">Search Similar Documents</h1>
@@ -146,7 +146,7 @@ const Search = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Download, Filter } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import { Button } from '../components/common/Button';
 import './AuditTrail.css';
 
@@ -13,7 +13,7 @@ const MOCK_LOGS = [
 
 const AuditTrail = () => {
   return (
-    <AppLayout>
+    <>
       <div className="audit-page">
         <div className="page-header">
           <h1 className="page-title">Audit Trail</h1>
@@ -67,7 +67,7 @@ const AuditTrail = () => {
           </table>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

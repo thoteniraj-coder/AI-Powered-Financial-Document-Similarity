@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldAlert, AlertTriangle, Info, CheckCircle } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import { Button } from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import './Alerts.css';
@@ -28,7 +28,7 @@ const Alerts = () => {
   const closeResolveModal = () => setResolveModal({ isOpen: false, alertId: null });
 
   return (
-    <AppLayout>
+    <>
       <div className="alerts-page">
         <div className="page-header">
           <h1 className="page-title">Alerts & Findings</h1>
@@ -116,7 +116,7 @@ const Alerts = () => {
           </div>
         </div>
       </Modal>
-    </AppLayout>
+    </>
   );
 };
 

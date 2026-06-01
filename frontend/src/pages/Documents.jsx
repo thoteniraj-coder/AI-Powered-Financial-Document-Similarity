@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, MoreVertical, Eye, FileSearch, Trash2 } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import { StatusBadge } from '../components/common/StatusBadge';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import { Button } from '../components/common/Button';
@@ -20,7 +20,7 @@ const Documents = () => {
   const [deleteId, setDeleteId] = useState(null);
   
   return (
-    <AppLayout>
+    <>
       <div className="documents-page">
         <div className="page-header">
           <h1 className="page-title">Documents</h1>
@@ -109,7 +109,7 @@ const Documents = () => {
         confirmText="Delete"
         isDanger={true}
       />
-    </AppLayout>
+    </>
   );
 };
 

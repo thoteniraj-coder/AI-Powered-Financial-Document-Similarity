@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import ScoreRing from '../components/Search/ScoreRing';
 import { Button } from '../components/common/Button';
 import './DocumentComparison.css';
@@ -10,7 +10,7 @@ const DocumentComparison = () => {
   const navigate = useNavigate();
 
   return (
-    <AppLayout>
+    <>
       <div className="compare-page">
         <div className="compare-header">
           <button className="back-btn" onClick={() => navigate(-1)}>
@@ -131,7 +131,7 @@ const DocumentComparison = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

@@ -1,11 +1,11 @@
 import React from 'react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import { Button } from '../components/common/Button';
 import './Settings.css';
 
 const Settings = () => {
   return (
-    <AppLayout>
+    <>
       <div className="settings-page">
         <div className="page-header">
           <h1 className="page-title">Settings</h1>
@@ -81,7 +81,7 @@ const Settings = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

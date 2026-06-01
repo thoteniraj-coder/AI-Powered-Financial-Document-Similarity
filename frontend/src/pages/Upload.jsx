@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { File, X, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import FileDropZone from '../components/Upload/FileDropZone';
 import ProcessingPipeline from '../components/Upload/ProcessingPipeline';
 import { Button } from '../components/common/Button';
@@ -63,7 +63,7 @@ const Upload = () => {
   };
 
   return (
-    <AppLayout>
+    <>
       <div className="upload-page">
         <div className="page-header">
           <h1 className="page-title">Upload Document</h1>
@@ -183,7 +183,7 @@ const Upload = () => {
           )}
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

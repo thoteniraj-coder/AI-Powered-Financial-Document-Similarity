@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Trash2, Columns, FileSearch } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import { StatusBadge } from '../components/common/StatusBadge';
 import ScoreRing from '../components/Search/ScoreRing';
 import { Button } from '../components/common/Button';
@@ -12,7 +12,7 @@ const DocumentDetail = () => {
   const navigate = useNavigate();
 
   return (
-    <AppLayout>
+    <>
       <div className="doc-detail-page">
         <button className="back-btn" onClick={() => navigate('/documents')}>
           <ArrowLeft size={16} />
@@ -148,7 +148,7 @@ const DocumentDetail = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 

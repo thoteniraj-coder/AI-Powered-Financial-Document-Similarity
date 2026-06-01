@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Eye, Columns } from 'lucide-react';
-import { AppLayout } from '../components/Layout/AppLayout';
+
 import ScoreRing from '../components/Search/ScoreRing';
 import SimilarityBadge from '../components/Search/SimilarityBadge';
 import FilterSidebar from '../components/Search/FilterSidebar';
@@ -20,7 +20,7 @@ const SearchResults = () => {
   const [results] = useState(MOCK_RESULTS);
 
   return (
-    <AppLayout>
+    <>
       <div className="search-results-page">
         <div className="results-header">
           <button className="back-btn" onClick={() => navigate('/search')}>
@@ -114,7 +114,7 @@ const SearchResults = () => {
           </div>
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 };
 
