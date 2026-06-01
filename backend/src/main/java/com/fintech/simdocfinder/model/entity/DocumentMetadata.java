@@ -34,7 +34,7 @@ public class DocumentMetadata {
     @Column(name = "total_amount", precision = 15, scale = 2)
     private BigDecimal totalAmount;
 
-    @Column(length = 3)
+    @Column(length = 3, columnDefinition = "bpchar")
     private String currency;
 
     @Column(name = "account_code", length = 50)
