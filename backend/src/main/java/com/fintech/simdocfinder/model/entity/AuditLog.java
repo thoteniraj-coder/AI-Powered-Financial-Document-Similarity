@@ -30,7 +30,7 @@ public class AuditLog {
     @Column(columnDefinition = "jsonb")
     private String payload;
 
-    @Column(name = "ip_address")
+    @Column(name = "ip_address", columnDefinition = "inet")
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false, updatable = false)
