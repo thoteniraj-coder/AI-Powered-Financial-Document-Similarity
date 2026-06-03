@@ -22,7 +22,7 @@ export function Sidebar({ isCollapsed, toggleSidebar }) {
     { path: '/upload', label: 'Upload', icon: FileUp, roles: ['all'] },
     { path: '/search', label: 'Search', icon: Search, roles: ['all'] },
     { path: '/documents', label: 'Documents', icon: FileText, roles: ['all'] },
-    { path: '/alerts', label: 'Alerts', icon: AlertTriangle, roles: ['manager', 'admin'] },
+    { path: '/alerts', label: 'Alerts', icon: AlertTriangle, roles: ['finance_manager', 'admin'] },
     { path: '/audit', label: 'Audit Trail', icon: ClipboardList, roles: ['admin'] },
     { path: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
   ];

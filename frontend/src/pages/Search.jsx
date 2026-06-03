@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, FileText, Upload, Database } from 'lucide-react';
 
 import FileDropZone from '../components/Upload/FileDropZone';
 import { Button } from '../components/common/Button';
+import { getDocuments, searchSimilar, findSimilar } from '../api/documents';
 import './Search.css';
 
 const Search = () => {
@@ -13,13 +14,91 @@ const Search = () => {
   const [topK, setTopK] = useState(10);
   const [isSearching, setIsSearching] = useState(false);
   const [queryText, setQueryText] = useState('');
+  const [queryFile, setQueryFile] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [recentDocuments, setRecentDocuments] = useState([]);
+  const [documentQuery, setDocumentQuery] = useState('');
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
 
-  const handleSearch = () => {
+  useEffect(() => {
+    const loadRecentDocuments = async () => {
+      try {
+        const response = await getDocuments({ page: 0, size: 20 });
+        setRecentDocuments(response.data.content || []);
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load recent documents.');
+      }
+    };
+
+    loadRecentDocuments();
+  }, []);
+
+  const filteredDocuments = useMemo(() => {
+    const query = documentQuery.trim().toLowerCase();
+    if (!query) return recentDocuments;
+
+    return recentDocuments.filter(doc => [
+      doc.filename,
+      doc.vendor,
+      doc.invoiceNumber,
+      doc.id,
+    ].some(value => String(value || '').toLowerCase().includes(query)));
+  }, [documentQuery, recentDocuments]);
+
+  const handleSearch = async () => {
+    if (activeTab === 'select') {
+      if (!selectedDocumentId) {
+        setErrorMsg('Please select a document from the list below.');
+        return;
+      }
+      setIsSearching(true);
+      setErrorMsg('');
+      try {
+        const selectedDoc = recentDocuments.find(d => d.id === selectedDocumentId);
+        const response = await findSimilar(selectedDocumentId, {
+          topK,
+          threshold: Number(threshold) / 100,
+        });
+        navigate('/search/results', {
+          state: {
+            response: response.data,
+            queryName: selectedDoc?.filename || 'Selected document',
+            threshold,
+          },
+        });
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Search failed. Please try again.');
+      } finally {
+        setIsSearching(false);
+      }
+      return;
+    }
+
+    if (activeTab !== 'upload' || !queryFile) {
+      setErrorMsg('Upload a query document to run similarity search.');
+      return;
+    }
+
     setIsSearching(true);
-    // Mock search delay
-    setTimeout(() => {
-      navigate('/search/results');
-    }, 1500);
+    setErrorMsg('');
+
+    try {
+      const response = await searchSimilar(queryFile, {
+        topK,
+        threshold: Number(threshold) / 100,
+      });
+      navigate('/search/results', {
+        state: {
+          response: response.data,
+          queryName: queryFile.name,
+          threshold,
+        },
+      });
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Search failed. Please try again.');
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   return (
@@ -60,7 +139,13 @@ const Search = () => {
               <div className="search-content">
                 {activeTab === 'upload' && (
                   <div className="tab-panel">
-                    <FileDropZone onFileSelect={() => {}} />
+                    {!queryFile ? (
+                      <FileDropZone onFileSelect={setQueryFile} />
+                    ) : (
+                      <div className="recent-doc-item">
+                        Selected query file: {queryFile.name}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -80,13 +165,31 @@ const Search = () => {
                   <div className="tab-panel">
                     <div className="document-selector">
                       <SearchIcon size={20} className="selector-icon" />
-                      <input type="text" placeholder="Search by filename, vendor, or ID..." className="selector-input" />
+                      <input
+                        type="text"
+                        placeholder="Search by filename, vendor, or ID..."
+                        className="selector-input"
+                        value={documentQuery}
+                        onChange={(e) => setDocumentQuery(e.target.value)}
+                      />
                     </div>
                     <div className="recent-docs">
-                      <p className="recent-docs-title">Recent Documents</p>
-                      <div className="recent-doc-item">INV-2023-001_AcmeCorp.pdf</div>
-                      <div className="recent-doc-item">Q3_Expense_Report.docx</div>
-                      <div className="recent-doc-item">Contract_TechFlow_Final.pdf</div>
+                      <p className="recent-docs-title">Select a document to find similar</p>
+                      {filteredDocuments.map(doc => (
+                        <button
+                          key={doc.id}
+                          className={`recent-doc-item${selectedDocumentId === doc.id ? ' selected' : ''}`}
+                          type="button"
+                          onClick={() => setSelectedDocumentId(doc.id === selectedDocumentId ? null : doc.id)}
+                        >
+                          <span className="doc-select-name">{doc.filename}</span>
+                          {doc.vendor && <span className="doc-select-vendor">{doc.vendor}</span>}
+                          {selectedDocumentId === doc.id && <span className="doc-select-check">✓</span>}
+                        </button>
+                      ))}
+                      {filteredDocuments.length === 0 && (
+                        <div className="recent-doc-item">No stored documents found.</div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -132,6 +235,11 @@ const Search = () => {
               </div>
 
               <div className="search-action">
+                {errorMsg && (
+                  <div className="login-error">
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
                 <Button 
                   variant="primary" 
                   className="w-full search-btn" 

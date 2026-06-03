@@ -6,6 +6,7 @@ import com.fintech.simdocfinder.model.dto.SearchResponse;
 import com.fintech.simdocfinder.model.dto.SearchResultItem;
 import com.fintech.simdocfinder.model.entity.*;
 import com.fintech.simdocfinder.parser.ParserService;
+import com.fintech.simdocfinder.repository.DocumentChunkRepository;
 import com.fintech.simdocfinder.repository.DocumentRepository;
 import com.fintech.simdocfinder.repository.SearchLogRepository;
 import com.fintech.simdocfinder.repository.SearchResultRepository;
@@ -32,6 +33,7 @@ public class SearchService {
     private final EmbeddingClient embeddingClient;
     private final QdrantService qdrantService;
     private final DocumentRepository documentRepository;
+    private final DocumentChunkRepository documentChunkRepository;
     private final SearchLogRepository searchLogRepository;
     private final SearchResultRepository searchResultRepository;
     private final AuditService auditService;
@@ -101,6 +103,83 @@ public class SearchService {
 
         return SearchResponse.builder()
                 .searchId(searchId)
+                .resultCount(finalResults.size())
+                .results(finalResults)
+                .build();
+    }
+
+    public SearchResponse searchByDocumentId(UUID documentId, SearchRequest request, User user, String ipAddress) {
+        log.info("Starting similarity search for existing document: {}", documentId);
+
+        Document sourceDoc = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
+
+        List<DocumentChunk> chunks = documentChunkRepository.findByDocumentId(documentId);
+        if (chunks.isEmpty()) {
+            throw new RuntimeException("No chunks found for document: " + documentId + ". The document may not have been processed yet.");
+        }
+
+        // Sort by chunk_index to maintain order
+        chunks.sort(Comparator.comparingInt(DocumentChunk::getChunkIndex));
+        List<String> chunkTexts = chunks.stream().map(DocumentChunk::getChunkText).collect(Collectors.toList());
+
+        List<float[]> embeddings = embeddingClient.embedBatch(chunkTexts);
+
+        // Build filter to exclude the source document from results
+        Filter excludeFilter = qdrantService.buildExcludeDocumentFilter(documentId);
+
+        Map<UUID, SearchResultItem> bestMatches = new HashMap<>();
+
+        for (int i = 0; i < embeddings.size(); i++) {
+            float[] queryEmbedding = embeddings.get(i);
+
+            List<ScoredPoint> points = qdrantService.searchSimilar(
+                    queryEmbedding, request.getTopK() * 2, request.getThreshold(), excludeFilter);
+
+            for (ScoredPoint point : points) {
+                String docIdStr = point.getPayloadMap().get("document_id").getStringValue();
+                UUID docId = UUID.fromString(docIdStr);
+
+                String filename = point.getPayloadMap().containsKey("filename") ? point.getPayloadMap().get("filename").getStringValue() : "Unknown";
+                String vendor = point.getPayloadMap().containsKey("vendor") ? point.getPayloadMap().get("vendor").getStringValue() : null;
+                String invoiceNumber = point.getPayloadMap().containsKey("invoice_number") ? point.getPayloadMap().get("invoice_number").getStringValue() : null;
+                String docType = point.getPayloadMap().containsKey("document_type") ? point.getPayloadMap().get("document_type").getStringValue() : null;
+                String chunkText = point.getPayloadMap().containsKey("chunk_text") ? point.getPayloadMap().get("chunk_text").getStringValue() : null;
+
+                double score = point.getScore();
+
+                SearchResultItem item = bestMatches.get(docId);
+                if (item == null || score > item.getSimilarityScore()) {
+                    bestMatches.put(docId, SearchResultItem.builder()
+                            .documentId(docId)
+                            .filename(filename)
+                            .vendor(vendor)
+                            .invoiceNumber(invoiceNumber)
+                            .documentType(docType)
+                            .similarityScore(score)
+                            .matchedSnippet(chunkText)
+                            .matchCategory(getMatchCategory(score))
+                            .build());
+                }
+            }
+        }
+
+        List<SearchResultItem> finalResults = bestMatches.values().stream()
+                .sorted(Comparator.comparing(SearchResultItem::getSimilarityScore).reversed())
+                .limit(request.getTopK())
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < finalResults.size(); i++) {
+            finalResults.get(i).setRank(i + 1);
+        }
+
+        UUID searchId = saveSearchLog(user, finalResults);
+        auditService.logAction(user, "DOCUMENT_FIND_SIMILAR", "DOCUMENT", documentId.toString(),
+                "Find similar for: " + sourceDoc.getFilename(), ipAddress);
+
+        return SearchResponse.builder()
+                .searchId(searchId)
+                .queryDocumentId(documentId)
                 .resultCount(finalResults.size())
                 .results(finalResults)
                 .build();

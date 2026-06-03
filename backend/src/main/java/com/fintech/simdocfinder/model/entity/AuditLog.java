@@ -27,10 +27,10 @@ public class AuditLog {
     @Column(name = "entity_id", length = 128)
     private String entityId;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "TEXT")
     private String payload;
 
-    @Column(name = "ip_address", columnDefinition = "inet")
+    @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
     @Column(name = "created_at", nullable = false, updatable = false)

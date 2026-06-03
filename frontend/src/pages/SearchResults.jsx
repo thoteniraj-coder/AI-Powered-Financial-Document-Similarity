@@ -1,23 +1,33 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Eye, Columns } from 'lucide-react';
 
 import ScoreRing from '../components/Search/ScoreRing';
 import SimilarityBadge from '../components/Search/SimilarityBadge';
 import FilterSidebar from '../components/Search/FilterSidebar';
+import DocumentPreviewModal from '../components/Documents/DocumentPreviewModal';
 import { Button } from '../components/common/Button';
 import './SearchResults.css';
 
-const MOCK_RESULTS = [
-  { id: '1', score: 0.98, filename: 'INV-2023-042_AcmeCorp.pdf', vendor: 'Acme Corp', amount: '$4,250.00', date: '2023-10-15', snippet: '...invoice total for <mark>software licensing fees</mark> comes to $4,250.00 payable within 30 days...', type: 'STRONG_MATCH' },
-  { id: '2', score: 0.85, filename: 'INV-2023-041_AcmeCorp.pdf', vendor: 'Acme Corp', amount: '$4,250.00', date: '2023-09-15', snippet: '...monthly invoice for <mark>software licensing</mark> and support services...', type: 'STRONG_MATCH' },
-  { id: '3', score: 0.76, filename: 'PO-78902_TechFlow.pdf', vendor: 'TechFlow', amount: '$3,800.00', date: '2023-10-01', snippet: '...purchase order for annual <mark>licensing fees</mark> and implementation...', type: 'RELATED' },
-  { id: '4', score: 0.62, filename: 'Contract_GlobalSystems.docx', vendor: 'Global Systems', amount: '-', date: '2022-11-20', snippet: '...standard <mark>software licensing</mark> agreement section 4.2 terms...', type: 'WEAK_MATCH' },
-];
-
 const SearchResults = () => {
   const navigate = useNavigate();
-  const [results] = useState(MOCK_RESULTS);
+  const location = useLocation();
+  const searchResponse = location.state?.response;
+  const queryName = location.state?.queryName || 'Uploaded query document';
+  const threshold = location.state?.threshold || 70;
+  const [results] = useState(
+    searchResponse?.results?.map((result) => ({
+      id: result.documentId,
+      score: result.similarityScore,
+      filename: result.filename,
+      vendor: result.vendor || '-',
+      amount: '-',
+      date: '-',
+      snippet: result.matchedSnippet || '',
+      type: result.matchCategory,
+    })) || []
+  );
+  const [previewDocument, setPreviewDocument] = useState(null);
 
   return (
     <>
@@ -29,13 +39,11 @@ const SearchResults = () => {
           </button>
           
           <div className="results-summary">
-            <h1 className="page-title">4 Results Found</h1>
+            <h1 className="page-title">{results.length} Results Found</h1>
             <div className="summary-meta">
-              <span>Query: "Software licensing fees invoice"</span>
+              <span>Query: {queryName}</span>
               <span className="dot-separator">•</span>
-              <span>Threshold: 70%</span>
-              <span className="dot-separator">•</span>
-              <span>0.42s</span>
+              <span>Threshold: {threshold}%</span>
             </div>
           </div>
         </div>
@@ -62,6 +70,14 @@ const SearchResults = () => {
             </div>
 
             <div className="results-list">
+              {results.length === 0 && (
+                <div className="result-card">
+                  <div className="result-info-col">
+                    <h3 className="result-filename">No results to show</h3>
+                    <p>Run a similarity search from the Search screen to see ranked matches here.</p>
+                  </div>
+                </div>
+              )}
               {results.map((result) => (
                 <div key={result.id} className="result-card">
                   <div className="result-score-col">
@@ -89,17 +105,19 @@ const SearchResults = () => {
                       </div>
                     </div>
                     
-                    <div className="result-snippet">
-                      <p dangerouslySetInnerHTML={{ __html: result.snippet }}></p>
-                    </div>
+                    {result.snippet && (
+                      <div className="result-snippet">
+                        <p>{result.snippet}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="result-actions-col">
-                    <Button variant="ghost" onClick={() => navigate(`/documents/${result.id}`)}>
+                    <Button variant="ghost" onClick={() => setPreviewDocument({ id: result.id, filename: result.filename })}>
                       <Eye size={16} />
                       <span>View</span>
                     </Button>
-                    <Button variant="ghost" onClick={() => navigate('/documents/compare')}>
+                    <Button variant="ghost" onClick={() => navigate(`/documents/compare?target=${result.id}`)}>
                       <Columns size={16} />
                       <span>Compare</span>
                     </Button>
@@ -114,6 +132,11 @@ const SearchResults = () => {
           </div>
         </div>
       </div>
+      <DocumentPreviewModal
+        document={previewDocument}
+        isOpen={!!previewDocument}
+        onClose={() => setPreviewDocument(null)}
+      />
     </>
   );
 };

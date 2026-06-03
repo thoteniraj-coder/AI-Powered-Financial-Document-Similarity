@@ -1,17 +1,31 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download, Filter } from 'lucide-react';
 
 import { Button } from '../components/common/Button';
+import { getAuditLogs } from '../api/audit';
 import './AuditTrail.css';
 
-const MOCK_LOGS = [
-  { id: 1, timestamp: '2023-10-15 14:32:01', user: 'Jane Doe', action: 'UPLOAD', entity: 'Document', details: 'Uploaded INV-2023-042_AcmeCorp.pdf', ip: '192.168.1.104' },
-  { id: 2, timestamp: '2023-10-15 14:35:22', user: 'System', action: 'FLAG', entity: 'Alert', details: 'Created duplicate alert for INV-2023-042', ip: '-' },
-  { id: 3, timestamp: '2023-10-15 15:10:05', user: 'John Smith', action: 'RESOLVE', entity: 'Alert', details: 'Resolved duplicate alert #1 - Ignored', ip: '10.0.0.52' },
-  { id: 4, timestamp: '2023-10-14 09:12:44', user: 'Jane Doe', action: 'LOGIN', entity: 'UserSession', details: 'Successful login', ip: '192.168.1.104' },
-];
-
 const AuditTrail = () => {
+  const [logs, setLogs] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+  const actorOptions = [...new Set(logs.map(log => log.actorUserId || 'System'))];
+
+  useEffect(() => {
+    const loadLogs = async () => {
+      try {
+        const response = await getAuditLogs();
+        setLogs(response.data || []);
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load audit logs.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadLogs();
+  }, []);
+
   return (
     <>
       <div className="audit-page">
@@ -34,13 +48,14 @@ const AuditTrail = () => {
           </select>
           <select className="audit-input">
             <option>All Users</option>
-            <option>Jane Doe</option>
-            <option>John Smith</option>
-            <option>System</option>
+            {actorOptions.map(actor => (
+              <option key={actor}>{actor === 'System' ? 'System' : `User ${actor}`}</option>
+            ))}
           </select>
         </div>
 
         <div className="table-container">
+          {errorMsg && <div className="login-error">{errorMsg}</div>}
           <table className="data-table">
             <thead>
               <tr>
@@ -53,16 +68,26 @@ const AuditTrail = () => {
               </tr>
             </thead>
             <tbody>
-              {MOCK_LOGS.map(log => (
+              {!isLoading && logs.map(log => (
                 <tr key={log.id}>
-                  <td className="monospace text-sm">{log.timestamp}</td>
-                  <td className="font-medium">{log.user}</td>
+                  <td className="monospace text-sm">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}</td>
+                  <td className="font-medium">{log.actorUserId || 'System'}</td>
                   <td><span className={`action-badge ${log.action.toLowerCase()}`}>{log.action}</span></td>
-                  <td>{log.entity}</td>
-                  <td className="text-sm truncate-max">{log.details}</td>
-                  <td className="monospace text-sm">{log.ip}</td>
+                  <td>{log.entityType || '-'}</td>
+                  <td className="text-sm truncate-max">{log.payload || log.entityId || '-'}</td>
+                  <td className="monospace text-sm">{log.ipAddress || '-'}</td>
                 </tr>
               ))}
+              {isLoading && (
+                <tr>
+                  <td colSpan="6">Loading audit logs...</td>
+                </tr>
+              )}
+              {!isLoading && logs.length === 0 && (
+                <tr>
+                  <td colSpan="6">No audit events recorded yet.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -86,4 +86,30 @@ public class DocumentController {
         }
         return ResponseEntity.ok(searchService.searchSimilar(queryFile, searchRequest, user, request.getRemoteAddr()));
     }
+
+    @PostMapping("/{id}/find-similar")
+    public ResponseEntity<SearchResponse> findSimilar(
+            @PathVariable UUID id,
+            @RequestParam(value = "topK", required = false, defaultValue = "10") int topK,
+            @RequestParam(value = "threshold", required = false, defaultValue = "0.5") double threshold,
+            Authentication authentication,
+            HttpServletRequest request) {
+
+        User user = null;
+        if (authentication != null) {
+            String username = authentication.getName();
+            user = userRepository.findByEmail(username).orElse(null);
+        }
+
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.setTopK(topK);
+        searchRequest.setThreshold(threshold);
+
+        return ResponseEntity.ok(searchService.searchByDocumentId(id, searchRequest, user, request.getRemoteAddr()));
+    }
+
+    @GetMapping("/{id}/download")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadDocument(@PathVariable UUID id) {
+        return documentService.downloadDocument(id);
+    }
 }

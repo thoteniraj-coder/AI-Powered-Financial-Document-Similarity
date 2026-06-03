@@ -89,6 +89,9 @@
   font-weight: 600;
   color: var(--slate-600);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .doc-tab.active {
@@ -99,6 +102,40 @@
 
 .doc-panel {
   padding: var(--space-6);
+}
+
+.document-view-panel {
+  background-color: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  min-height: 560px;
+  overflow: hidden;
+}
+
+.document-preview-frame {
+  width: 100%;
+  height: 70vh;
+  min-height: 560px;
+  border: 0;
+  background-color: white;
+}
+
+.document-preview-image {
+  display: block;
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  background-color: white;
+}
+
+.document-view-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 560px;
+  padding: var(--space-6);
+  color: var(--slate-500);
+  text-align: center;
 }
 
 .meta-grid {
@@ -168,6 +205,46 @@
   line-height: 1.5;
   color: var(--slate-700);
   white-space: pre-wrap;
+}
+
+.chunks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: var(--space-2);
+}
+
+.chunk-item {
+  background-color: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.chunk-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy-600);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.chunk-text {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--slate-700);
+  white-space: pre-wrap;
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--slate-500);
+  font-style: italic;
 }
 
 .similar-list {

@@ -49,13 +49,15 @@ public class QdrantService {
         }
     }
 
-    public void upsertPoints(UUID documentId, List<String> chunks, List<float[]> embeddings, Map<String, Object> metadata) {
+    public void upsertPoints(UUID documentId, List<UUID> pointIds, List<String> chunks, List<float[]> embeddings, Map<String, Object> metadata) {
         log.info("Upserting {} points to Qdrant for document: {}", chunks.size(), documentId);
         try {
+            if (pointIds.size() != chunks.size() || embeddings.size() != chunks.size()) {
+                throw new IllegalArgumentException("Point IDs, chunks, and embeddings must have matching sizes");
+            }
+
             List<PointStruct> points = new java.util.ArrayList<>();
             for (int i = 0; i < chunks.size(); i++) {
-                String pointId = UUID.randomUUID().toString();
-                
                 Map<String, io.qdrant.client.grpc.JsonWithInt.Value> payload = new java.util.HashMap<>();
                 payload.put("document_id", value(documentId.toString()));
                 payload.put("chunk_index", value(i));
@@ -64,9 +66,14 @@ public class QdrantService {
                 if (metadata.get("document_type") != null) payload.put("document_type", value(metadata.get("document_type").toString()));
                 if (metadata.get("vendor") != null) payload.put("vendor", value(metadata.get("vendor").toString()));
                 if (metadata.get("invoice_number") != null) payload.put("invoice_number", value(metadata.get("invoice_number").toString()));
+                if (metadata.get("invoice_date") != null) payload.put("invoice_date", value(metadata.get("invoice_date").toString()));
+                if (metadata.get("total_amount") != null) payload.put("total_amount", value(metadata.get("total_amount").toString()));
+                if (metadata.get("currency") != null) payload.put("currency", value(metadata.get("currency").toString()));
+                if (metadata.get("uploaded_by") != null) payload.put("uploaded_by", value(metadata.get("uploaded_by").toString()));
+                if (metadata.get("upload_timestamp") != null) payload.put("upload_timestamp", value(metadata.get("upload_timestamp").toString()));
 
                 points.add(PointStruct.newBuilder()
-                        .setId(id(UUID.fromString(pointId)))
+                        .setId(id(pointIds.get(i)))
                         .setVectors(io.qdrant.client.grpc.Points.Vectors.newBuilder()
                                 .setVector(io.qdrant.client.grpc.Points.Vector.newBuilder()
                                         .addAllData(toList(embeddings.get(i)))
@@ -122,6 +129,12 @@ public class QdrantService {
             log.error("Failed to delete points for document: {}", documentId, e);
             throw new RuntimeException("Qdrant delete failed", e);
         }
+    }
+
+    public Filter buildExcludeDocumentFilter(UUID excludeDocumentId) {
+        return Filter.newBuilder()
+                .addMustNot(matchKeyword("document_id", excludeDocumentId.toString()))
+                .build();
     }
 
     public boolean healthCheck() {

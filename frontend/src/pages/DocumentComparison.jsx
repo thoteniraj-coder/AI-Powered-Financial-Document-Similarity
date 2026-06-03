@@ -1,13 +1,145 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, AlertTriangle } from 'lucide-react';
 
 import ScoreRing from '../components/Search/ScoreRing';
 import { Button } from '../components/common/Button';
+import { getDocument, getDocuments } from '../api/documents';
 import './DocumentComparison.css';
+
+const formatAmount = (document) => {
+  if (!document?.totalAmount) return '-';
+  return `${document.currency || ''} ${Number(document.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`.trim();
+};
+
+const buildFields = (document) => ({
+  Vendor: document?.vendor || '-',
+  'Invoice Number': document?.invoiceNumber || '-',
+  Date: document?.invoiceDate || '-',
+  Amount: formatAmount(document),
+  Type: document?.documentType || '-',
+});
 
 const DocumentComparison = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sourceId = searchParams.get('source');
+  const targetId = searchParams.get('target');
+  const [sourceDocument, setSourceDocument] = useState(null);
+  const [targetDocument, setTargetDocument] = useState(null);
+  const [availableDocs, setAvailableDocs] = useState([]);
+  const [isLoading, setIsLoading] = useState(Boolean(sourceId || targetId));
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    const loadDocuments = async () => {
+      if (!sourceId && !targetId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const [sourceResponse, targetResponse] = await Promise.all([
+          sourceId ? getDocument(sourceId) : Promise.resolve({ data: null }),
+          targetId ? getDocument(targetId) : Promise.resolve({ data: null }),
+        ]);
+        setSourceDocument(sourceResponse.data);
+        setTargetDocument(targetResponse.data);
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load comparison documents.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDocuments();
+  }, [sourceId, targetId]);
+
+  useEffect(() => {
+    const fetchAvailable = async () => {
+      try {
+        const res = await getDocuments({ size: 50 });
+        setAvailableDocs(res.data?.content || []);
+      } catch (e) {
+        console.error("Failed to load available docs", e);
+      }
+    };
+    fetchAvailable();
+  }, []);
+
+  const sourceFields = useMemo(() => buildFields(sourceDocument), [sourceDocument]);
+  const targetFields = useMemo(() => buildFields(targetDocument), [targetDocument]);
+  const comparisonScore = useMemo(() => {
+    if (!sourceDocument || !targetDocument) return 0;
+    const labels = Object.keys(sourceFields);
+    const matches = labels.filter(label => sourceFields[label] !== '-' && sourceFields[label] === targetFields[label]).length;
+    return matches / labels.length;
+  }, [sourceDocument, targetDocument, sourceFields, targetFields]);
+
+  const renderMetadata = (fields, otherFields) => (
+    <div className="compare-section">
+      <h3 className="section-title">Metadata</h3>
+      {Object.entries(fields).map(([label, value]) => {
+        const isMatch = value !== '-' && value === otherFields[label];
+        return (
+          <div className="field-row" key={label}>
+            <span className="field-label">{label}</span>
+            <span className={`field-value ${isMatch ? 'match' : 'diff'}`}>{value}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderDocumentColumn = (label, document, fields, otherFields, isSource) => (
+    <div className="compare-col">
+      <div className="col-header">
+        <span className={`col-badge ${label === 'Target Document' ? 'target' : ''}`}>{label}</span>
+        <h2 className="col-doc-name">{document?.filename || 'No document selected'}</h2>
+      </div>
+
+      {document ? (
+        <>
+          {renderMetadata(fields, otherFields)}
+          <div className="compare-section">
+            <h3 className="section-title">Extracted Text</h3>
+            <div className="text-scroll-area">
+              {document.extractedText ? (
+                <pre style={{ margin: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', whiteSpace: 'pre-wrap', color: 'var(--slate-700)' }}>
+                  {document.extractedText}
+                </pre>
+              ) : (
+                <p className="text-slate-500 italic">No extracted text available.</p>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="compare-section">
+          <h3 className="section-title">Select a document</h3>
+          <p className="text-slate-500" style={{ marginBottom: '12px' }}>Choose a document to compare against the other column.</p>
+          <select 
+            className="w-full p-2 border border-slate-300 rounded"
+            style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '14px' }}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (!val) return;
+              if (isSource) {
+                navigate(`/documents/compare?source=${val}${targetId ? `&target=${targetId}` : ''}`);
+              } else {
+                navigate(`/documents/compare?target=${val}${sourceId ? `&source=${sourceId}` : ''}`);
+              }
+            }}
+          >
+            <option value="">-- Choose Document --</option>
+            {availableDocs.map(d => (
+              <option key={d.id} value={d.id}>{d.filename}</option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -17,119 +149,34 @@ const DocumentComparison = () => {
             <ArrowLeft size={16} />
             <span>Back</span>
           </button>
-          
+
           <div className="compare-title-row">
             <h1 className="page-title">Document Comparison</h1>
             <div className="overall-score">
-              <ScoreRing score={0.98} size="lg" />
-              <span className="score-label">Overall Similarity</span>
+              <ScoreRing score={comparisonScore} size="lg" />
+              <span className="score-label">Metadata Similarity</span>
             </div>
           </div>
         </div>
 
         <div className="compare-actions">
-          <Button variant="primary">Mark as Duplicate</Button>
-          <Button variant="outline" className="text-warning"><AlertTriangle size={16} /> Flag for Review</Button>
-          <Button variant="ghost">Ignore</Button>
+          <Button variant="primary" disabled={!sourceDocument || !targetDocument}>Mark as Duplicate</Button>
+          <Button variant="outline" className="text-warning" disabled={!sourceDocument || !targetDocument}>
+            <AlertTriangle size={16} /> Flag for Review
+          </Button>
+          <Button variant="ghost" onClick={() => navigate('/documents')}>Choose Documents</Button>
         </div>
 
-        <div className="compare-grid">
-          <div className="compare-col">
-            <div className="col-header">
-              <span className="col-badge">Source Document</span>
-              <h2 className="col-doc-name">INV-2023-042_AcmeCorp.pdf</h2>
-            </div>
-            
-            <div className="compare-section">
-              <h3 className="section-title">Metadata</h3>
-              <div className="field-row">
-                <span className="field-label">Vendor</span>
-                <span className="field-value match">Acme Corp</span>
-              </div>
-              <div className="field-row">
-                <span className="field-label">Invoice Number</span>
-                <span className="field-value diff">INV-2023-042</span>
-              </div>
-              <div className="field-row">
-                <span className="field-label">Date</span>
-                <span className="field-value match">Oct 15, 2023</span>
-              </div>
-              <div className="field-row">
-                <span className="field-label">Amount</span>
-                <span className="field-value match">$4,250.00</span>
-              </div>
-            </div>
-            
-            <div className="compare-section">
-              <h3 className="section-title">Extracted Text</h3>
-              <div className="text-scroll-area">
-                <p>INVOICE</p>
-                <p>Acme Corp</p>
-                <p>123 Tech Lane, Silicon Valley, CA 94025</p>
-                <p><br/></p>
-                <p>BILL TO:</p>
-                <p>Global Systems Inc</p>
-                <p>456 Market St, San Francisco, CA 94105</p>
-                <p><br/></p>
-                <p>Invoice No: <mark className="diff-mark">INV-2023-042</mark></p>
-                <p>Date: October 15, 2023</p>
-                <p><br/></p>
-                <p>DESCRIPTION                              AMOUNT</p>
-                <p><mark className="match-mark">Software Licensing Fees (Annual)         $4,250.00</mark></p>
-                <p>TOTAL DUE                                $4,250.00</p>
-              </div>
-            </div>
+        {isLoading && <div className="compare-section">Loading comparison data...</div>}
+        {errorMsg && <div className="login-error">{errorMsg}</div>}
+
+        {!isLoading && (
+          <div className="compare-grid">
+            {renderDocumentColumn('Source Document', sourceDocument, sourceFields, targetFields, true)}
+            <div className="compare-divider"></div>
+            {renderDocumentColumn('Target Document', targetDocument, targetFields, sourceFields, false)}
           </div>
-          
-          <div className="compare-divider"></div>
-          
-          <div className="compare-col">
-            <div className="col-header">
-              <span className="col-badge target">Target Document</span>
-              <h2 className="col-doc-name">INV-2023-041_AcmeCorp.pdf</h2>
-            </div>
-            
-            <div className="compare-section">
-              <h3 className="section-title">Metadata</h3>
-              <div className="field-row">
-                <span className="field-label">Vendor</span>
-                <span className="field-value match">Acme Corp</span>
-              </div>
-              <div className="field-row">
-                <span className="field-label">Invoice Number</span>
-                <span className="field-value diff">INV-2023-041</span>
-              </div>
-              <div className="field-row">
-                <span className="field-label">Date</span>
-                <span className="field-value match">Oct 15, 2023</span>
-              </div>
-              <div className="field-row">
-                <span className="field-label">Amount</span>
-                <span className="field-value match">$4,250.00</span>
-              </div>
-            </div>
-            
-            <div className="compare-section">
-              <h3 className="section-title">Extracted Text</h3>
-              <div className="text-scroll-area">
-                <p>INVOICE</p>
-                <p>Acme Corp</p>
-                <p>123 Tech Lane, Silicon Valley, CA 94025</p>
-                <p><br/></p>
-                <p>BILL TO:</p>
-                <p>Global Systems Inc</p>
-                <p>456 Market St, San Francisco, CA 94105</p>
-                <p><br/></p>
-                <p>Invoice No: <mark className="diff-mark">INV-2023-041</mark></p>
-                <p>Date: October 15, 2023</p>
-                <p><br/></p>
-                <p>DESCRIPTION                              AMOUNT</p>
-                <p><mark className="match-mark">Software Licensing Fees (Annual)         $4,250.00</mark></p>
-                <p>TOTAL DUE                                $4,250.00</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </>
   );

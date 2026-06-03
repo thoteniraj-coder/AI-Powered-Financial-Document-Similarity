@@ -98,8 +98,8 @@ CREATE TABLE audit_logs (
     action VARCHAR(100) NOT NULL,
     entity_type VARCHAR(100),
     entity_id VARCHAR(128),
-    payload JSONB,
-    ip_address INET,
+    payload TEXT,
+    ip_address VARCHAR(45),
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -204,7 +204,7 @@ INSERT INTO roles (name, description) VALUES
 
 -- Seed data: default admin user (password: Admin@2026)
 INSERT INTO users (email, password_hash, full_name, role_id, department) VALUES
-('admin@finco.internal', '$2a$12$LJ3m4ys3GEAO1FIYfBX4a.YfAe1WrCjEmxLLjKl5J3nZ4vH.qGy9S', 'System Administrator', 1, 'IT');
+('admin@finco.internal', '$2a$12$JPJUY/D8TUM30en.Ra0rBOnfMR/hkvZ6C9c..IemPl.CBGGBW4hCG', 'System Administrator', 1, 'IT');
 
 -- Seed data: retention policies
 INSERT INTO retention_policies (document_type, retention_years, action_on_expiry) VALUES

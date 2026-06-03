@@ -12,10 +12,10 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (token) {
-      // In a real app, you would fetch user profile here
-      // For now, let's mock it
-      setUser({ name: 'Admin User', email: 'admin@findoc.ai' });
-      setRole('admin');
+      const storedUser = localStorage.getItem('user');
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      setUser(parsedUser);
+      setRole(parsedUser?.role || null);
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     }
     setIsLoading(false);
@@ -24,10 +24,12 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     try {
       const data = await authApi.login(email, password);
+      const nextUser = { name: data.fullName, email, role: data.role };
       setToken(data.token);
-      setUser(data.user);
-      setRole(data.user.role);
+      setUser(nextUser);
+      setRole(nextUser.role);
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(nextUser));
       apiClient.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
       return true;
     } catch (error) {
@@ -40,6 +42,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setRole(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     delete apiClient.defaults.headers.common['Authorization'];
   };
 

@@ -100,7 +100,7 @@ public class DocumentService {
             processDocument(document, file, user, ipAddress);
 
             return DocumentUploadResponse.builder()
-                    .documentId(documentId)
+                    .documentId(document.getId())
                     .filename(filename)
                     .status("completed")
                     .message("Document processed successfully")
@@ -138,15 +138,24 @@ public class DocumentService {
             qdrantMetadata.put("document_type", document.getDocumentType());
             qdrantMetadata.put("vendor", metadata.getVendor());
             qdrantMetadata.put("invoice_number", metadata.getInvoiceNumber());
+            qdrantMetadata.put("invoice_date", metadata.getInvoiceDate());
+            qdrantMetadata.put("total_amount", metadata.getTotalAmount());
+            qdrantMetadata.put("currency", metadata.getCurrency());
+            qdrantMetadata.put("uploaded_by", user != null ? user.getEmail() : null);
+            qdrantMetadata.put("upload_timestamp", document.getCreatedAt());
 
-            qdrantService.upsertPoints(document.getId(), chunks, embeddings, qdrantMetadata);
+            List<UUID> pointIds = chunks.stream()
+                    .map(chunk -> UUID.randomUUID())
+                    .collect(Collectors.toList());
+
+            qdrantService.upsertPoints(document.getId(), pointIds, chunks, embeddings, qdrantMetadata);
 
             for (int i = 0; i < chunks.size(); i++) {
                 DocumentChunk chunk = DocumentChunk.builder()
                         .document(document)
                         .chunkIndex(i)
                         .chunkText(chunks.get(i))
-                        .qdrantPointId(UUID.randomUUID().toString())
+                        .qdrantPointId(pointIds.get(i).toString())
                         .createdAt(LocalDateTime.now())
                         .build();
                 documentChunkRepository.save(chunk);
@@ -175,7 +184,19 @@ public class DocumentService {
     public DocumentResponse getDocumentById(UUID id) {
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Document not found"));
-        return mapToResponse(document);
+        DocumentResponse response = mapToResponse(document);
+        
+        List<DocumentChunk> chunks = documentChunkRepository.findByDocumentId(id);
+        if (chunks != null && !chunks.isEmpty()) {
+            chunks.sort(java.util.Comparator.comparingInt(DocumentChunk::getChunkIndex));
+            List<String> chunkTexts = chunks.stream()
+                    .map(DocumentChunk::getChunkText)
+                    .collect(Collectors.toList());
+            response.setChunks(chunkTexts);
+            response.setExtractedText(String.join("\n\n", chunkTexts));
+        }
+        
+        return response;
     }
 
     @Transactional
@@ -212,5 +233,31 @@ public class DocumentService {
                 .uploadedBy(doc.getUploadedBy() != null ? doc.getUploadedBy().getEmail() : null)
                 .uploadedAt(doc.getCreatedAt())
                 .build();
+    }
+
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> downloadDocument(UUID id) {
+        try {
+            Document document = documentRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Document not found"));
+            
+            Path path = Paths.get(document.getStoragePath());
+            org.springframework.core.io.Resource resource = new org.springframework.core.io.UrlResource(path.toUri());
+            
+            if (resource.exists() || resource.isReadable()) {
+                String contentType = document.getFileType();
+                if (contentType == null || contentType.isEmpty()) {
+                    contentType = "application/octet-stream";
+                }
+                return org.springframework.http.ResponseEntity.ok()
+                        .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                        .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getFilename() + "\"")
+                        .body(resource);
+            } else {
+                throw new RuntimeException("Could not read the file!");
+            }
+        } catch (Exception e) {
+            log.error("Error downloading file", e);
+            throw new RuntimeException("Error downloading file: " + e.getMessage());
+        }
     }
 }

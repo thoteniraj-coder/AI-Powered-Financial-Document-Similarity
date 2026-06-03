@@ -1,9 +1,47 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { Button } from '../components/common/Button';
+import { getHealth } from '../api/health';
+import { getUsers } from '../api/users';
 import './Settings.css';
 
 const Settings = () => {
+  const [users, setUsers] = useState([]);
+  const [health, setHealth] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const [usersResult, healthResult] = await Promise.allSettled([
+          getUsers(),
+          getHealth(),
+        ]);
+
+        if (usersResult.status === 'fulfilled') {
+          setUsers(usersResult.value.data || []);
+        } else {
+          setErrorMsg(usersResult.reason.response?.data?.message || usersResult.reason.message || 'Unable to load users.');
+        }
+
+        if (healthResult.status === 'fulfilled') {
+          setHealth(healthResult.value.data);
+        } else if (healthResult.reason.response?.data) {
+          setHealth(healthResult.reason.response.data);
+        } else {
+          setErrorMsg(healthResult.reason.message || 'Unable to load system health.');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  const healthEntries = health?.components ? Object.entries(health.components) : [];
+
   return (
     <>
       <div className="settings-page">
@@ -20,6 +58,7 @@ const Settings = () => {
           </div>
 
           <div className="settings-content">
+            {errorMsg && <div className="login-error">{errorMsg}</div>}
             <div className="settings-card">
               <div className="settings-card-header">
                 <h2 className="settings-card-title">Users</h2>
@@ -37,20 +76,25 @@ const Settings = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="font-medium">Jane Doe</td>
-                    <td>jane@example.com</td>
-                    <td>Admin</td>
-                    <td><span className="status-dot active"></span> Active</td>
-                    <td><button className="text-btn">Edit</button></td>
-                  </tr>
-                  <tr>
-                    <td className="font-medium">John Smith</td>
-                    <td>john@example.com</td>
-                    <td>Manager</td>
-                    <td><span className="status-dot active"></span> Active</td>
-                    <td><button className="text-btn">Edit</button></td>
-                  </tr>
+                  {!isLoading && users.map(user => (
+                    <tr key={user.id}>
+                      <td className="font-medium">{user.fullName || '-'}</td>
+                      <td>{user.email}</td>
+                      <td>{user.role || '-'}</td>
+                      <td><span className={`status-dot ${user.active ? 'active' : ''}`}></span> {user.active ? 'Active' : 'Inactive'}</td>
+                      <td><button className="text-btn">Edit</button></td>
+                    </tr>
+                  ))}
+                  {isLoading && (
+                    <tr>
+                      <td colSpan="5">Loading users...</td>
+                    </tr>
+                  )}
+                  {!isLoading && users.length === 0 && (
+                    <tr>
+                      <td colSpan="5">No users found.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -62,20 +106,24 @@ const Settings = () => {
               <div className="health-grid">
                 <div className="health-card">
                   <div className="health-title">Backend API</div>
-                  <div className="health-status good">Operational</div>
+                  <div className={`health-status ${health?.status === 'UP' ? 'good' : ''}`}>
+                    {health?.status === 'UP' ? 'Operational' : health?.status || 'Unknown'}
+                  </div>
                 </div>
-                <div className="health-card">
-                  <div className="health-title">PostgreSQL Database</div>
-                  <div className="health-status good">Operational</div>
-                </div>
-                <div className="health-card">
-                  <div className="health-title">Qdrant Vector DB</div>
-                  <div className="health-status good">Operational</div>
-                </div>
-                <div className="health-card">
-                  <div className="health-title">Embedding Service</div>
-                  <div className="health-status good">Operational</div>
-                </div>
+                {healthEntries.map(([component, status]) => (
+                  <div key={component} className="health-card">
+                    <div className="health-title">{component}</div>
+                    <div className={`health-status ${status === 'UP' ? 'good' : ''}`}>
+                      {status === 'UP' ? 'Operational' : status}
+                    </div>
+                  </div>
+                ))}
+                {!isLoading && healthEntries.length === 0 && (
+                  <div className="health-card">
+                    <div className="health-title">No component data</div>
+                    <div className="health-status">Unknown</div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

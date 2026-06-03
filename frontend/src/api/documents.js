@@ -3,24 +3,36 @@ import client from './client';
 export const uploadDocument = (file, metadata) => {
   const formData = new FormData();
   formData.append('file', file);
-  if (metadata) {
-    formData.append('metadata', JSON.stringify(metadata));
+  if (metadata?.documentType) {
+    formData.append('documentType', metadata.documentType);
   }
-  return client.post('/api/documents/upload', formData, {
+  return client.post('/documents/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
 
-export const getDocuments = (params) => client.get('/api/documents', { params });
-export const getDocument = (id) => client.get(`/api/documents/${id}`);
-export const deleteDocument = (id) => client.delete(`/api/documents/${id}`);
+export const getDocuments = (params) => client.get('/documents', { params });
+export const getDocument = (id) => client.get(`/documents/${id}`);
+export const downloadDocumentFile = (id) => client.get(`/documents/${id}/download`, { responseType: 'blob' });
+export const deleteDocument = (id) => client.delete(`/documents/${id}`);
 export const searchSimilar = (file, options) => {
   const formData = new FormData();
   if (file) formData.append('file', file);
-  if (options) formData.append('options', JSON.stringify(options));
-  return client.post('/api/documents/search', formData, {
+  if (options) {
+    Object.entries(options).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        formData.append(key, value);
+      }
+    });
+  }
+  return client.post('/documents/search', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
 };
-export const findSimilar = (documentId) => client.post(`/api/documents/${documentId}/find-similar`);
-export const compareDocuments = (documentIds) => client.post('/api/documents/compare', { documentIds });
+export const findSimilar = (documentId, options) => {
+  const params = {};
+  if (options?.topK) params.topK = options.topK;
+  if (options?.threshold !== undefined) params.threshold = options.threshold;
+  return client.post(`/documents/${documentId}/find-similar`, null, { params });
+};
+export const compareDocuments = (documentIds) => client.post('/documents/compare', { documentIds });

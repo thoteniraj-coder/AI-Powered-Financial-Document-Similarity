@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShieldAlert, AlertTriangle, Info, CheckCircle } from 'lucide-react';
 
 import { Button } from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import { getAlerts, updateAlert } from '../api/alerts';
 import './Alerts.css';
-
-const MOCK_ALERTS = [
-  { id: '1', type: 'duplicate', severity: 'high', title: 'Exact Duplicate Detected', desc: 'INV-2023-042_AcmeCorp.pdf is a 98% match with INV-2023-041_AcmeCorp.pdf', status: 'open', date: '2 hours ago' },
-  { id: '2', type: 'fraud', severity: 'high', title: 'Suspicious Vendor Anomaly', desc: 'Vendor "Acme Corp" bank details differ from historical records.', status: 'open', date: '5 hours ago' },
-  { id: '3', type: 'anomaly', severity: 'medium', title: 'Unusual Amount', desc: 'Invoice amount $45,000 exceeds usual vendor average by 400%.', status: 'acknowledged', date: '1 day ago' },
-];
 
 const Alerts = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [resolveModal, setResolveModal] = useState({ isOpen: false, alertId: null });
+  const [alerts, setAlerts] = useState([]);
+  const [resolutionComment, setResolutionComment] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const loadAlerts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await getAlerts();
+      setAlerts(response.data || []);
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Unable to load alerts.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAlerts();
+  }, []);
 
   const getSeverityIcon = (severity) => {
     switch (severity) {
@@ -25,7 +40,32 @@ const Alerts = () => {
   };
 
   const openResolveModal = (id) => setResolveModal({ isOpen: true, alertId: id });
-  const closeResolveModal = () => setResolveModal({ isOpen: false, alertId: null });
+  const closeResolveModal = () => {
+    setResolveModal({ isOpen: false, alertId: null });
+    setResolutionComment('');
+  };
+
+  const handleAlertStatus = async (id, status) => {
+    try {
+      await updateAlert(id, { status, comment: resolutionComment });
+      closeResolveModal();
+      await loadAlerts();
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Unable to update alert.');
+    }
+  };
+
+  const visibleAlerts = alerts
+    .map((alert) => ({
+      id: alert.id,
+      type: (alert.alertType || 'anomaly').toLowerCase(),
+      severity: (alert.severity || 'low').toLowerCase(),
+      title: alert.alertType || 'Alert',
+      desc: alert.description,
+      status: (alert.status || 'open').toLowerCase(),
+      date: alert.createdAt ? new Date(alert.createdAt).toLocaleString() : '-',
+    }))
+    .filter(alert => activeTab === 'all' || alert.type === activeTab);
 
   return (
     <>
@@ -57,7 +97,10 @@ const Alerts = () => {
         </div>
 
         <div className="alerts-list">
-          {MOCK_ALERTS.filter(a => activeTab === 'all' || a.type === activeTab).map(alert => (
+          {errorMsg && <div className="login-error">{errorMsg}</div>}
+          {isLoading && <div className="alert-card">Loading alerts...</div>}
+          {!isLoading && visibleAlerts.length === 0 && <div className="alert-card">No alerts found.</div>}
+          {!isLoading && visibleAlerts.map(alert => (
             <div key={alert.id} className={`alert-card severity-${alert.severity}`}>
               <div className="alert-icon-col">
                 {getSeverityIcon(alert.severity)}
@@ -75,7 +118,7 @@ const Alerts = () => {
               <div className="alert-actions-col">
                 {alert.status === 'open' && (
                   <>
-                    <Button variant="outline" className="w-full mb-2">Acknowledge</Button>
+                    <Button variant="outline" className="w-full mb-2" onClick={() => handleAlertStatus(alert.id, 'acknowledged')}>Acknowledge</Button>
                     <Button variant="primary" className="w-full" onClick={() => openResolveModal(alert.id)}>Resolve</Button>
                   </>
                 )}
@@ -95,7 +138,13 @@ const Alerts = () => {
         footer={
           <>
             <Button variant="ghost" onClick={closeResolveModal}>Cancel</Button>
-            <Button variant="primary" onClick={closeResolveModal}>Submit Resolution</Button>
+            <Button
+              variant="primary"
+              onClick={() => handleAlertStatus(resolveModal.alertId, 'resolved')}
+              disabled={!resolutionComment.trim()}
+            >
+              Submit Resolution
+            </Button>
           </>
         }
       >
@@ -112,7 +161,13 @@ const Alerts = () => {
           </div>
           <div className="form-group mt-4">
             <label>Comments (Required)</label>
-            <textarea className="w-full p-2 border rounded" rows={4} placeholder="Enter resolution details..."></textarea>
+            <textarea
+              className="w-full p-2 border rounded"
+              rows={4}
+              placeholder="Enter resolution details..."
+              value={resolutionComment}
+              onChange={(event) => setResolutionComment(event.target.value)}
+            ></textarea>
           </div>
         </div>
       </Modal>

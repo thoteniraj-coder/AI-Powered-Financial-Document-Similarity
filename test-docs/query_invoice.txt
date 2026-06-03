@@ -1,0 +1,30 @@
+INVOICE
+
+Invoice Number: INV-2026-007
+Date: June 10, 2026
+Due Date: July 10, 2026
+
+From:
+Acme Technology Solutions Inc.
+123 Innovation Drive, Suite 400
+San Francisco, CA 94105
+
+Bill To:
+FinCo International Holdings
+456 Wall Street, Floor 22
+New York, NY 10005
+
+Description                          Quantity    Unit Price    Amount
+-------------------------------------------------------------------
+Cloud Infrastructure Services           1        $15,000.00   $15,000.00
+Software License - Enterprise Plan      1        $25,000.00   $25,000.00
+Cybersecurity Audit                     1        $10,000.00   $10,000.00
+
+                                            Subtotal:    $50,000.00
+                                            Tax (8.5%):   $4,250.00
+                                            Total:       $54,250.00
+
+Payment Terms: Net 30
+Payment Method: Wire Transfer
+
+Notes: Q4 2026 cloud services with additional cybersecurity audit.

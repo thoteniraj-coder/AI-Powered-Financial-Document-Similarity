@@ -1,38 +1,54 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileText, Copy, AlertTriangle, Clock, FileUp, MoreVertical } from 'lucide-react';
 import { StatCard } from '../components/common/StatCard';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { LoadingSkeleton } from '../components/common/LoadingSkeleton';
+import { getAlerts } from '../api/alerts';
+import { getDocuments } from '../api/documents';
 import './Dashboard.css';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [documents, setDocuments] = useState([]);
+  const [totalDocuments, setTotalDocuments] = useState(0);
+  const [alerts, setAlerts] = useState([]);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    // Mock data loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    const loadDashboard = async () => {
+      try {
+        const [documentsResponse, alertsResponse] = await Promise.all([
+          getDocuments({ page: 0, size: 5 }),
+          getAlerts(),
+        ]);
+
+        setDocuments(documentsResponse.data.content || []);
+        setTotalDocuments(documentsResponse.data.totalElements || 0);
+        setAlerts(alertsResponse.data || []);
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load dashboard data.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDashboard();
   }, []);
 
+  const activeAlerts = alerts
+    .filter(alert => !['resolved', 'closed', 'ignored'].includes(String(alert.status || '').toLowerCase()));
+  const visibleActiveAlerts = activeAlerts.slice(0, 3);
+  const duplicateAlerts = alerts.filter(alert => String(alert.alertType || '').toLowerCase().includes('duplicate')).length;
+  const fraudAlerts = activeAlerts.filter(alert => ['high', 'critical'].includes(String(alert.severity || '').toLowerCase())).length;
+  const pendingReviews = documents.filter(doc => ['pending', 'processing'].includes(String(doc.processingStatus || '').toLowerCase())).length + activeAlerts.length;
+
   const stats = [
-    { title: 'Documents Uploaded', value: '1,248', icon: FileText, color: 'navy', trend: { direction: 'up', value: 12 } },
-    { title: 'Duplicates Found', value: '34', icon: Copy, color: 'amber', trend: { direction: 'down', value: 5 } },
-    { title: 'Fraud Alerts', value: '7', icon: AlertTriangle, color: 'red', trend: { direction: 'up', value: 2 } },
-    { title: 'Pending Reviews', value: '18', icon: Clock, color: 'slate', trend: { direction: 'neutral', value: 0 } },
-  ];
-
-  const recentUploads = [
-    { id: 'INV-2023-001', vendor: 'Acme Corp', type: 'Invoice', status: 'Indexed', date: 'Oct 24, 10:30 AM' },
-    { id: 'REC-89234', vendor: 'TechSupply', type: 'Receipt', status: 'Processing', date: 'Oct 24, 09:15 AM' },
-    { id: 'INV-2023-002', vendor: 'Global Services', type: 'Invoice', status: 'Failed', date: 'Oct 23, 04:45 PM' },
-    { id: 'PO-45992', vendor: 'Office Needs', type: 'Purchase Order', status: 'Pending', date: 'Oct 23, 02:20 PM' },
-  ];
-
-  const activeAlerts = [
-    { id: 1, type: 'Potential Duplicate', severity: 'High', message: 'Invoice #1029 matches amount and vendor of #1024', docId: 'INV-1029' },
-    { id: 2, type: 'Date Anomaly', severity: 'Medium', message: 'Document date is in the future', docId: 'REC-9921' },
+    { title: 'Documents Uploaded', value: totalDocuments.toLocaleString(), icon: FileText, color: 'navy' },
+    { title: 'Duplicates Found', value: duplicateAlerts.toLocaleString(), icon: Copy, color: 'amber' },
+    { title: 'High Risk Alerts', value: fraudAlerts.toLocaleString(), icon: AlertTriangle, color: 'red' },
+    { title: 'Pending Reviews', value: pendingReviews.toLocaleString(), icon: Clock, color: 'slate' },
   ];
 
   return (
@@ -47,10 +63,11 @@ export function Dashboard() {
         <div className="recent-uploads-section">
           <div className="section-header">
             <h2 className="section-heading">Recent Uploads</h2>
-            <button className="btn btn-ghost btn-sm">View All</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/documents')}>View All</button>
           </div>
           
           <div className="card table-card">
+            {errorMsg && <div className="login-error">{errorMsg}</div>}
             <table className="data-table">
               <thead>
                 <tr>
@@ -70,18 +87,23 @@ export function Dashboard() {
                     </tr>
                   ))
                 ) : (
-                  recentUploads.map((doc) => (
+                  documents.map((doc) => (
                     <tr key={doc.id}>
-                      <td className="invoice-id">{doc.id}</td>
-                      <td><strong>{doc.vendor}</strong></td>
-                      <td><span className="text-slate-500">{doc.type}</span></td>
-                      <td><StatusBadge status={doc.status} /></td>
-                      <td className="text-slate-500 text-sm">{doc.date}</td>
+                      <td className="invoice-id">{doc.invoiceNumber || String(doc.id).slice(0, 8)}</td>
+                      <td><strong>{doc.vendor || '-'}</strong></td>
+                      <td><span className="text-slate-500">{doc.documentType || '-'}</span></td>
+                      <td><StatusBadge status={doc.processingStatus} /></td>
+                      <td className="text-slate-500 text-sm">{doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString() : '-'}</td>
                       <td className="text-right">
-                        <button className="icon-btn"><MoreVertical size={16} /></button>
+                        <button className="icon-btn" onClick={() => navigate(`/documents/${doc.id}`)}><MoreVertical size={16} /></button>
                       </td>
                     </tr>
                   ))
+                )}
+                {!isLoading && documents.length === 0 && (
+                  <tr>
+                    <td colSpan="6">No documents uploaded yet.</td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -97,27 +119,34 @@ export function Dashboard() {
             {isLoading ? (
               <LoadingSkeleton type="card" count={2} />
             ) : (
-              activeAlerts.map(alert => (
+              visibleActiveAlerts.map(alert => (
                 <div key={alert.id} className="alert-card">
                   <div className="alert-header">
-                    <span className={`badge ${alert.severity === 'High' ? 'badge-danger' : 'badge-warning'}`}>
+                    <span className={`badge ${String(alert.severity).toLowerCase() === 'high' ? 'badge-danger' : 'badge-warning'}`}>
                       {alert.severity}
                     </span>
-                    <span className="alert-type">{alert.type}</span>
+                    <span className="alert-type">{alert.alertType}</span>
                   </div>
-                  <p className="alert-message">{alert.message}</p>
+                  <p className="alert-message">{alert.description}</p>
                   <div className="alert-footer">
-                    <span className="text-sm text-slate-500">Affects:</span>
-                    <a href="#" className="invoice-id text-navy-600">{alert.docId}</a>
+                    <span className="text-sm text-slate-500">Status:</span>
+                    <button type="button" className="invoice-id text-navy-600 text-btn" onClick={() => navigate('/alerts')}>
+                      {alert.status || 'open'}
+                    </button>
                   </div>
                 </div>
               ))
+            )}
+            {!isLoading && visibleActiveAlerts.length === 0 && (
+              <div className="alert-card">
+                <p className="alert-message">No active alerts.</p>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      <button className="fab-btn" title="Quick Upload">
+      <button className="fab-btn" title="Quick Upload" onClick={() => navigate('/upload')}>
         <FileUp size={24} />
       </button>
     </div>
