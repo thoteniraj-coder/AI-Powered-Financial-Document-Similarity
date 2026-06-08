@@ -46,8 +46,15 @@ export function AuthProvider({ children }) {
     delete apiClient.defaults.headers.common['Authorization'];
   };
 
+  const updateProfile = (updates) => {
+    const updatedUser = { ...user, ...updates };
+    setUser(updatedUser);
+    if (updates.role) setRole(updates.role);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, role, isAuthenticated: !!token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, role, isAuthenticated: !!token, login, logout, updateProfile, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

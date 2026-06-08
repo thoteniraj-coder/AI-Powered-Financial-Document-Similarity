@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Download, Trash2, Columns, FileSearch, Eye } from 'lucide-react';
+import {
+  ArrowLeft,
+  ChevronRight,
+  Columns,
+  Download,
+  Eye,
+  FileSearch,
+  FileText,
+  ShieldAlert,
+  Tag,
+  Trash2,
+} from 'lucide-react';
 
 import { StatusBadge } from '../components/common/StatusBadge';
 import ScoreRing from '../components/Search/ScoreRing';
@@ -124,6 +135,18 @@ const DocumentDetail = () => {
     ? `${document.currency || ''} ${Number(document.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`.trim()
     : '-';
 
+  const uploadedDate = document?.uploadedAt ? new Date(document.uploadedAt).toLocaleString() : '-';
+  const fileType = document?.fileType || document?.contentType || 'Unknown';
+  const chunksCount = document?.chunksCount || document?.chunks?.length || 0;
+  const duplicateRisk = similarDocs.length >= 3 ? 'High' : similarDocs.length > 0 ? 'Medium' : 'Low';
+  const duplicateRiskClass = duplicateRisk.toLowerCase();
+  const duplicateRiskWidth = duplicateRisk === 'High' ? '100%' : duplicateRisk === 'Medium' ? '56%' : '18%';
+
+  const formatMatchCategory = (category) => {
+    if (!category) return 'Match';
+    return category.replace(/_/g, ' ').toLowerCase();
+  };
+
   const handleDownload = async () => {
     try {
       const response = await downloadDocumentFile(id);
@@ -158,29 +181,32 @@ const DocumentDetail = () => {
         
         <div className="doc-header">
           <div className="doc-title-row">
-            <h1 className="doc-filename">{document?.filename || 'Loading document...'}</h1>
-            <StatusBadge status={document?.processingStatus || 'pending'} />
+            <div className="doc-title-main">
+              <div className="doc-file-icon">
+                <FileText size={22} />
+              </div>
+              <div className="doc-title-copy">
+                <h1 className="doc-filename">{document?.filename || 'Loading document...'}</h1>
+                <StatusBadge status={document?.processingStatus || 'pending'} />
+              </div>
+            </div>
+            <div className="doc-header-actions">
+              <Button variant="primary" onClick={handleFindSimilar}>
+                <FileSearch size={16} /> Find Similar
+              </Button>
+              <Button variant="secondary" onClick={() => navigate(`/documents/compare?source=${id}`)}>
+                <Columns size={16} /> Compare
+              </Button>
+            </div>
           </div>
           <div className="doc-meta-bar">
-            <span>Uploaded: {document?.uploadedAt ? new Date(document.uploadedAt).toLocaleString() : '-'}</span>
-            <span className="dot-separator">•</span>
+            <span>Uploaded: {uploadedDate}</span>
+            <span className="dot-separator">/</span>
             <span>By: {document?.uploadedBy || '-'}</span>
-            <span className="dot-separator">•</span>
-            <span>ID: {id || 'doc-12345'}</span>
+            <span className="dot-separator">/</span>
+            <span className="doc-id-text">ID: {id || 'doc-12345'}</span>
           </div>
-        </div>
-        {errorMsg && <div className="login-error">{errorMsg}</div>}
-        
-        <div className="doc-actions-bar">
-          <div className="left-actions">
-            <Button variant="outline" onClick={handleFindSimilar}>
-              <FileSearch size={16} /> Find Similar
-            </Button>
-            <Button variant="outline" onClick={() => navigate(`/documents/compare?source=${id}`)}>
-              <Columns size={16} /> Compare
-            </Button>
-          </div>
-          <div className="right-actions">
+          <div className="doc-secondary-actions">
             <Button variant="ghost" onClick={handleDownload}>
               <Download size={16} /> Download
             </Button>
@@ -189,6 +215,7 @@ const DocumentDetail = () => {
             </Button>
           </div>
         </div>
+        {errorMsg && <div className="login-error">{errorMsg}</div>}
 
         <div className="doc-layout">
           <div className="doc-main">
@@ -222,7 +249,9 @@ const DocumentDetail = () => {
                       </div>
                       <div className="meta-group">
                         <label>Document Type</label>
-                        <div className="meta-val">{document?.documentType || '-'}</div>
+                        <div className="meta-val">
+                          <span className="doc-type-pill">{document?.documentType || '-'}</span>
+                        </div>
                       </div>
                       <div className="meta-group">
                         <label>Invoice Number</label>
@@ -245,7 +274,7 @@ const DocumentDetail = () => {
                     <div className="tags-section">
                       <label>Tags</label>
                       <div className="tags-list">
-                        <span className="tag">No tags returned by the document API.</span>
+                        <span className="tag empty-tag"><Tag size={13} /> No tags returned by the document API.</span>
                       </div>
                     </div>
                   </>
@@ -297,7 +326,7 @@ const DocumentDetail = () => {
                       document.chunks.map((chunk, idx) => (
                         <div key={idx} className="chunk-item">
                           <div className="chunk-header">Chunk {idx + 1}</div>
-                          <div className="chunk-text">{chunk}</div>
+                          <div className="chunk-text">{typeof chunk === 'string' ? chunk : chunk.text || JSON.stringify(chunk)}</div>
                         </div>
                       ))
                     ) : (
@@ -311,7 +340,10 @@ const DocumentDetail = () => {
           
           <div className="doc-sidebar">
             <div className="similar-card">
-              <h3 className="card-title">Similar Documents</h3>
+              <div className="side-card-title-row">
+                <h3 className="card-title">Similar documents</h3>
+                <button className="side-link" onClick={handleFindSimilar}>View all</button>
+              </div>
               
               <div className="similar-list">
                 {loadingSimilar ? (
@@ -326,8 +358,9 @@ const DocumentDetail = () => {
                       <ScoreRing score={doc.similarityScore} size="sm" />
                       <div className="similar-info">
                         <div className="similar-name truncate" title={doc.filename}>{doc.filename}</div>
-                        <div className="similar-meta">{doc.matchCategory.replace('_', ' ')}</div>
+                        <div className="similar-meta">{formatMatchCategory(doc.matchCategory)}</div>
                       </div>
+                      <ChevronRight size={16} className="similar-chevron" />
                     </div>
                   ))
                 ) : (
@@ -340,10 +373,30 @@ const DocumentDetail = () => {
                   </div>
                 )}
               </div>
-              
-              <Button variant="ghost" className="w-full mt-4" onClick={handleFindSimilar}>
-                View all similar
-              </Button>
+            </div>
+
+            <div className="info-card">
+              <h3 className="info-card-title">File details</h3>
+              <div className="info-row"><span>File type</span><strong>{fileType}</strong></div>
+              <div className="info-row"><span>Processing</span><strong className="success-text">{document?.processingStatus || 'pending'}</strong></div>
+              <div className="info-row"><span>OCR used</span><strong>{document?.ocrUsed ? 'Yes' : 'No'}</strong></div>
+              <div className="info-row"><span>Chunks</span><strong>{chunksCount}</strong></div>
+              <div className="info-row"><span>Retention</span><strong>7 years</strong></div>
+              <div className="info-row"><span>Expires</span><strong className="monospace">2033-01-06</strong></div>
+            </div>
+
+            <div className="info-card">
+              <div className="risk-title">
+                <ShieldAlert size={16} />
+                <h3 className="info-card-title">Duplicate risk</h3>
+              </div>
+              <div className="risk-meter">
+                <span style={{ width: duplicateRiskWidth }} className={`risk-fill ${duplicateRiskClass}`} />
+              </div>
+              <div className="risk-summary">
+                <strong className={`risk-label ${duplicateRiskClass}`}>{duplicateRisk}</strong>
+                <span>{similarDocs.length} near match{similarDocs.length === 1 ? '' : 'es'} found in system</span>
+              </div>
             </div>
           </div>
         </div>

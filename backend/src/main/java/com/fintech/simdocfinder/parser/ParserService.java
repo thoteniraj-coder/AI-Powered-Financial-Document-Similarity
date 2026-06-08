@@ -15,6 +15,7 @@ public class ParserService {
 
     private final PdfParser pdfParser;
     private final DocxParser docxParser;
+    private final ExcelParser excelParser;
     private final TextParser textParser;
     private final OcrService ocrService;
 
@@ -27,9 +28,16 @@ public class ParserService {
         try {
             if (contentType.equals("application/pdf") || filename.endsWith(".pdf")) {
                 PdfParser.ParserResult result = pdfParser.parse(file.getInputStream());
+                if (result.text() == null || result.text().isBlank()) {
+                    String ocrText = ocrService.extractTextFromPdf(file);
+                    return new ParserResult(ocrText, result.pageCount(), true);
+                }
                 return new ParserResult(result.text(), result.pageCount(), false);
             } else if (contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document") || filename.endsWith(".docx")) {
                 String text = docxParser.parse(file.getInputStream());
+                return new ParserResult(text, 1, false);
+            } else if (isExcelFile(contentType, filename)) {
+                String text = excelParser.parse(file.getInputStream());
                 return new ParserResult(text, 1, false);
             } else if (contentType.equals("text/plain") || filename.endsWith(".txt")) {
                 String text = textParser.parse(file.getInputStream());
@@ -44,6 +52,14 @@ public class ParserService {
             log.error("Error parsing file", e);
             throw new RuntimeException("Error parsing file: " + e.getMessage(), e);
         }
+    }
+
+    private boolean isExcelFile(String contentType, String filename) {
+        return contentType.equals("application/vnd.ms-excel")
+                || contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                || contentType.equals("application/vnd.ms-excel.sheet.macroEnabled.12")
+                || contentType.equals("application/vnd.ms-excel.sheet.binary.macroEnabled.12")
+                || filename.matches(".*\\.(xls|xlsx|xlsm|xlsb)$");
     }
 
     public record ParserResult(String text, int pageCount, boolean ocrUsed) {}

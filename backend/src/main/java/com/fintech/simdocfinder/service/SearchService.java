@@ -18,9 +18,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static io.qdrant.client.ConditionFactory.matchKeyword;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +41,7 @@ public class SearchService {
     private final SearchLogRepository searchLogRepository;
     private final SearchResultRepository searchResultRepository;
     private final AuditService auditService;
+    private final PiiMaskingService piiMaskingService;
 
     public SearchResponse searchSimilar(MultipartFile queryFile, SearchRequest request, User user, String ipAddress) {
         log.info("Starting similarity search");
@@ -56,12 +61,15 @@ public class SearchService {
         for (int i = 0; i < embeddings.size(); i++) {
             float[] queryEmbedding = embeddings.get(i);
             
-            // Build filter if needed
-            Filter filter = null; // Simplify for now
+            Filter filter = buildKeywordFilter(request.getFilters());
 
             List<ScoredPoint> points = qdrantService.searchSimilar(queryEmbedding, request.getTopK() * 2, request.getThreshold(), filter);
 
             for (ScoredPoint point : points) {
+                if (!payloadMatchesFilters(point, request.getFilters())) {
+                    continue;
+                }
+
                 String docIdStr = point.getPayloadMap().get("document_id").getStringValue();
                 UUID docId = UUID.fromString(docIdStr);
                 
@@ -70,6 +78,7 @@ public class SearchService {
                 String invoiceNumber = point.getPayloadMap().containsKey("invoice_number") ? point.getPayloadMap().get("invoice_number").getStringValue() : null;
                 String docType = point.getPayloadMap().containsKey("document_type") ? point.getPayloadMap().get("document_type").getStringValue() : null;
                 String chunkText = point.getPayloadMap().containsKey("chunk_text") ? point.getPayloadMap().get("chunk_text").getStringValue() : null;
+                chunkText = piiMaskingService.maskForUser(chunkText, user);
 
                 double score = point.getScore();
                 
@@ -98,7 +107,7 @@ public class SearchService {
             finalResults.get(i).setRank(i + 1);
         }
 
-        UUID searchId = saveSearchLog(user, finalResults);
+        UUID searchId = saveSearchLog(user, null, request.getThreshold(), finalResults);
         auditService.logAction(user, "DOCUMENT_SEARCH", "SEARCH", searchId.toString(), "Performed similarity search", ipAddress);
 
         return SearchResponse.builder()
@@ -145,6 +154,7 @@ public class SearchService {
                 String invoiceNumber = point.getPayloadMap().containsKey("invoice_number") ? point.getPayloadMap().get("invoice_number").getStringValue() : null;
                 String docType = point.getPayloadMap().containsKey("document_type") ? point.getPayloadMap().get("document_type").getStringValue() : null;
                 String chunkText = point.getPayloadMap().containsKey("chunk_text") ? point.getPayloadMap().get("chunk_text").getStringValue() : null;
+                chunkText = piiMaskingService.maskForUser(chunkText, user);
 
                 double score = point.getScore();
 
@@ -173,7 +183,7 @@ public class SearchService {
             finalResults.get(i).setRank(i + 1);
         }
 
-        UUID searchId = saveSearchLog(user, finalResults);
+        UUID searchId = saveSearchLog(user, sourceDoc, request.getThreshold(), finalResults);
         auditService.logAction(user, "DOCUMENT_FIND_SIMILAR", "DOCUMENT", documentId.toString(),
                 "Find similar for: " + sourceDoc.getFilename(), ipAddress);
 
@@ -191,10 +201,99 @@ public class SearchService {
         return "WEAK_MATCH";
     }
 
-    private UUID saveSearchLog(User user, List<SearchResultItem> results) {
+    private Filter buildKeywordFilter(SearchRequest.SearchFilters filters) {
+        if (filters == null) {
+            return null;
+        }
+
+        Filter.Builder builder = Filter.newBuilder();
+        boolean hasFilter = false;
+
+        if (hasText(filters.getVendor())) {
+            builder.addMust(matchKeyword("vendor", filters.getVendor()));
+            hasFilter = true;
+        }
+        if (hasText(filters.getDocumentType())) {
+            builder.addMust(matchKeyword("document_type", filters.getDocumentType()));
+            hasFilter = true;
+        }
+        if (hasText(filters.getCurrency())) {
+            builder.addMust(matchKeyword("currency", filters.getCurrency()));
+            hasFilter = true;
+        }
+
+        return hasFilter ? builder.build() : null;
+    }
+
+    private boolean payloadMatchesFilters(ScoredPoint point, SearchRequest.SearchFilters filters) {
+        if (filters == null) {
+            return true;
+        }
+
+        Map<String, io.qdrant.client.grpc.JsonWithInt.Value> payload = point.getPayloadMap();
+
+        if (filters.getAmountMin() != null || filters.getAmountMax() != null) {
+            BigDecimal amount = payloadDecimal(payload, "total_amount");
+            if (amount == null) {
+                return false;
+            }
+            if (filters.getAmountMin() != null && amount.compareTo(filters.getAmountMin()) < 0) {
+                return false;
+            }
+            if (filters.getAmountMax() != null && amount.compareTo(filters.getAmountMax()) > 0) {
+                return false;
+            }
+        }
+
+        if (filters.getDateFrom() != null || filters.getDateTo() != null) {
+            LocalDate invoiceDate = payloadDate(payload, "invoice_date");
+            if (invoiceDate == null) {
+                return false;
+            }
+            if (filters.getDateFrom() != null && invoiceDate.isBefore(filters.getDateFrom())) {
+                return false;
+            }
+            if (filters.getDateTo() != null && invoiceDate.isAfter(filters.getDateTo())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private BigDecimal payloadDecimal(Map<String, io.qdrant.client.grpc.JsonWithInt.Value> payload, String key) {
+        if (!payload.containsKey(key)) {
+            return null;
+        }
+        try {
+            return new BigDecimal(payload.get(key).getStringValue());
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private LocalDate payloadDate(Map<String, io.qdrant.client.grpc.JsonWithInt.Value> payload, String key) {
+        if (!payload.containsKey(key)) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(payload.get(key).getStringValue());
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private UUID saveSearchLog(User user, Document queryDocument, double threshold, List<SearchResultItem> results) {
         SearchLog logEntity = SearchLog.builder()
                 .searchedBy(user)
-                .searchedAt(LocalDateTime.now()).resultCount(results.size()).thresholdUsed(java.math.BigDecimal.valueOf(0.70))
+                .queryDocument(queryDocument)
+                .searchedAt(LocalDateTime.now())
+                .resultCount(results.size())
+                .thresholdUsed(java.math.BigDecimal.valueOf(threshold))
                 .build();
         logEntity = searchLogRepository.save(logEntity);
 

@@ -3,9 +3,42 @@ import { useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, FileText, Upload, Database } from 'lucide-react';
 
 import FileDropZone from '../components/Upload/FileDropZone';
+import FilterSidebar from '../components/Search/FilterSidebar';
 import { Button } from '../components/common/Button';
 import { getDocuments, searchSimilar, findSimilar } from '../api/documents';
 import './Search.css';
+
+const EMPTY_FILTERS = {
+  vendors: [],
+  docTypes: [],
+  dateFrom: '',
+  dateTo: '',
+  minAmount: '',
+  maxAmount: '',
+  currency: 'Any'
+};
+
+const toApiFilters = (filters) => ({
+  vendor: filters.vendors?.[0] || '',
+  documentType: filters.docTypes?.[0] || '',
+  dateFrom: filters.dateFrom || '',
+  dateTo: filters.dateTo || '',
+  amountMin: filters.minAmount || '',
+  amountMax: filters.maxAmount || '',
+  currency: filters.currency === 'Any' ? '' : filters.currency,
+});
+
+const countActiveFilters = (filters) => {
+  return [
+    filters.vendors?.length,
+    filters.docTypes?.length,
+    filters.dateFrom,
+    filters.dateTo,
+    filters.minAmount,
+    filters.maxAmount,
+    filters.currency !== 'Any' ? filters.currency : '',
+  ].filter(Boolean).length;
+};
 
 const Search = () => {
   const navigate = useNavigate();
@@ -19,6 +52,10 @@ const Search = () => {
   const [recentDocuments, setRecentDocuments] = useState([]);
   const [documentQuery, setDocumentQuery] = useState('');
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+
+  const apiFilters = useMemo(() => toApiFilters(filters), [filters]);
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   useEffect(() => {
     const loadRecentDocuments = async () => {
@@ -58,6 +95,7 @@ const Search = () => {
         const response = await findSimilar(selectedDocumentId, {
           topK,
           threshold: Number(threshold) / 100,
+          filters: apiFilters,
         });
         navigate('/search/results', {
           state: {
@@ -86,6 +124,7 @@ const Search = () => {
       const response = await searchSimilar(queryFile, {
         topK,
         threshold: Number(threshold) / 100,
+        filters: apiFilters,
       });
       navigate('/search/results', {
         state: {
@@ -251,6 +290,13 @@ const Search = () => {
                 </Button>
               </div>
             </div>
+
+            <FilterSidebar
+              filters={filters}
+              activeCount={activeFilterCount}
+              onApply={setFilters}
+              onClear={() => setFilters(EMPTY_FILTERS)}
+            />
           </div>
         </div>
       </div>

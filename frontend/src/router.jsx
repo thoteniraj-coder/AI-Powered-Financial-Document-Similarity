@@ -14,6 +14,7 @@ import DocumentComparison from './pages/DocumentComparison';
 import Alerts from './pages/Alerts';
 import AuditTrail from './pages/AuditTrail';
 import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 
 export const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
@@ -33,7 +34,8 @@ export const router = createBrowserRouter([
           { path: "/documents/:id", element: <DocumentDetail /> },
           { path: "/alerts", element: <Alerts /> },
           { path: "/audit", element: <AuditTrail /> },
-          { path: "/settings", element: <Settings /> }
+          { path: "/settings", element: <Settings /> },
+          { path: "/profile", element: <Profile /> }
         ]
       }
     ]

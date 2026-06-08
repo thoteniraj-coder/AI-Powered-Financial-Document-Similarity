@@ -39,4 +39,16 @@ file:
 
 chunk:
   size: 800
+  overlap: 100
   max-per-doc: 50
+
+malware:
+  scan:
+    enabled: ${MALWARE_SCAN_ENABLED:false}
+    clamav:
+      host: ${CLAMAV_HOST:localhost}
+      port: ${CLAMAV_PORT:3310}
+      timeout-ms: ${CLAMAV_TIMEOUT_MS:10000}
+
+fraud:
+  amount-deviation-threshold: ${FRAUD_AMOUNT_DEVIATION_THRESHOLD:0.20}

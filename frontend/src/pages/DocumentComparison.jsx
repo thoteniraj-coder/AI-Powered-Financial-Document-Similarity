@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ChevronDown, Copy, FilePlus, Files, Search } from 'lucide-react';
 
 import ScoreRing from '../components/Search/ScoreRing';
 import { Button } from '../components/common/Button';
@@ -19,6 +19,19 @@ const buildFields = (document) => ({
   Amount: formatAmount(document),
   Type: document?.documentType || '-',
 });
+
+const buildComparisonUrl = ({ source, target }) => {
+  const params = new URLSearchParams();
+  if (source) params.set('source', source);
+  if (target) params.set('target', target);
+  return `/documents/compare?${params.toString()}`;
+};
+
+const formatDateLine = (document) => {
+  if (!document) return 'Choose a document from the list below';
+  const uploaded = document.uploadedAt ? new Date(document.uploadedAt).toLocaleDateString() : '-';
+  return `Uploaded ${uploaded} / ${document.uploadedBy || '-'}`;
+};
 
 const DocumentComparison = () => {
   const navigate = useNavigate();
@@ -76,15 +89,43 @@ const DocumentComparison = () => {
     return matches / labels.length;
   }, [sourceDocument, targetDocument, sourceFields, targetFields]);
 
-  const renderMetadata = (fields, otherFields) => (
-    <div className="compare-section">
-      <h3 className="section-title">Metadata</h3>
+  const scoreLabel = targetDocument
+    ? comparisonScore >= 0.8
+      ? 'Strong metadata match'
+      : comparisonScore >= 0.4
+        ? 'Partial metadata match'
+        : 'Low metadata match'
+    : 'No target selected';
+
+  const scoreClass = targetDocument
+    ? comparisonScore >= 0.8
+      ? 'strong'
+      : comparisonScore >= 0.4
+        ? 'partial'
+        : 'low'
+    : 'empty';
+
+  const handleSelectDocument = (value, isSource) => {
+    if (!value) return;
+    navigate(buildComparisonUrl({
+      source: isSource ? value : sourceId,
+      target: isSource ? targetId : value,
+    }));
+  };
+
+  const renderMetadata = (fields, otherFields, hasOtherDocument) => (
+    <div className="compare-metadata">
+      <div className="compare-section-title">Metadata</div>
       {Object.entries(fields).map(([label, value]) => {
-        const isMatch = value !== '-' && value === otherFields[label];
+        const isEmpty = value === '-';
+        const isMatch = hasOtherDocument && value !== '-' && value === otherFields[label];
+        const isDiff = hasOtherDocument && !isMatch && !isEmpty;
         return (
-          <div className="field-row" key={label}>
-            <span className="field-label">{label}</span>
-            <span className={`field-value ${isMatch ? 'match' : 'diff'}`}>{value}</span>
+          <div className="compare-field-row" key={label}>
+            <span className="compare-field-label">{label}</span>
+            <span className={`compare-field-value ${isMatch ? 'match' : ''} ${isDiff ? 'diff' : ''} ${isEmpty ? 'empty' : ''}`}>
+              {isEmpty ? 'Not set' : value}
+            </span>
           </div>
         );
       })}
@@ -92,50 +133,45 @@ const DocumentComparison = () => {
   );
 
   const renderDocumentColumn = (label, document, fields, otherFields, isSource) => (
-    <div className="compare-col">
-      <div className="col-header">
-        <span className={`col-badge ${label === 'Target Document' ? 'target' : ''}`}>{label}</span>
-        <h2 className="col-doc-name">{document?.filename || 'No document selected'}</h2>
+    <div className={`compare-col ${isSource ? 'source' : 'target'}`}>
+      <div className="compare-col-header">
+        <span className={`compare-col-type ${isSource ? 'source' : 'target'}`}>{label}</span>
+        <h2 className={`compare-col-name ${!document ? 'empty' : ''}`}>{document?.filename || 'No document selected'}</h2>
+        <div className="compare-col-sub">{formatDateLine(document)}</div>
       </div>
 
       {document ? (
         <>
-          {renderMetadata(fields, otherFields)}
-          <div className="compare-section">
-            <h3 className="section-title">Extracted Text</h3>
-            <div className="text-scroll-area">
+          {renderMetadata(fields, otherFields, isSource ? Boolean(targetDocument) : Boolean(sourceDocument))}
+          <div className="compare-text-section">
+            <div className="compare-section-title">Extracted text</div>
+            <div className="compare-text-box">
               {document.extractedText ? (
-                <pre style={{ margin: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', whiteSpace: 'pre-wrap', color: 'var(--slate-700)' }}>
-                  {document.extractedText}
-                </pre>
+                <pre>{document.extractedText}</pre>
               ) : (
-                <p className="text-slate-500 italic">No extracted text available.</p>
+                <p>No extracted text available.</p>
               )}
             </div>
           </div>
         </>
       ) : (
-        <div className="compare-section">
-          <h3 className="section-title">Select a document</h3>
-          <p className="text-slate-500" style={{ marginBottom: '12px' }}>Choose a document to compare against the other column.</p>
-          <select 
-            className="w-full p-2 border border-slate-300 rounded"
-            style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '14px' }}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (!val) return;
-              if (isSource) {
-                navigate(`/documents/compare?source=${val}${targetId ? `&target=${targetId}` : ''}`);
-              } else {
-                navigate(`/documents/compare?target=${val}${sourceId ? `&source=${sourceId}` : ''}`);
-              }
-            }}
-          >
-            <option value="">-- Choose Document --</option>
-            {availableDocs.map(d => (
-              <option key={d.id} value={d.id}>{d.filename}</option>
-            ))}
-          </select>
+        <div className="empty-target">
+          <div className="empty-icon"><FilePlus size={22} /></div>
+          <div className="empty-title">Select a document to compare</div>
+          <div className="empty-desc">Choose any document from your library to compare against the other column.</div>
+          <label className="select-wrap">
+            <select value="" onChange={(e) => handleSelectDocument(e.target.value, isSource)}>
+              <option value="">Choose document</option>
+              {availableDocs.map(d => (
+                <option key={d.id} value={d.id}>{d.filename}</option>
+              ))}
+            </select>
+            <ChevronDown size={16} />
+          </label>
+          <div className="empty-or">or</div>
+          <Button variant="secondary" onClick={() => navigate('/search')}>
+            <Search size={16} /> Search similar documents
+          </Button>
         </div>
       )}
     </div>
@@ -144,36 +180,49 @@ const DocumentComparison = () => {
   return (
     <>
       <div className="compare-page">
-        <div className="compare-header">
-          <button className="back-btn" onClick={() => navigate(-1)}>
-            <ArrowLeft size={16} />
-            <span>Back</span>
-          </button>
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <ArrowLeft size={16} />
+          <span>Back</span>
+        </button>
 
-          <div className="compare-title-row">
-            <h1 className="page-title">Document Comparison</h1>
-            <div className="overall-score">
-              <ScoreRing score={comparisonScore} size="lg" />
-              <span className="score-label">Metadata Similarity</span>
+        <div className="compare-header">
+          <div>
+            <h1 className="page-title">Document comparison</h1>
+            <p className="page-subtitle">Compare two documents side by side to detect duplicates or discrepancies.</p>
+          </div>
+          <div className="overall-score">
+            <ScoreRing score={comparisonScore} size="md" />
+            <div>
+              <span className="score-label">Metadata similarity</span>
+              <span className={`score-verdict ${scoreClass}`}>{scoreLabel}</span>
             </div>
           </div>
         </div>
 
         <div className="compare-actions">
-          <Button variant="primary" disabled={!sourceDocument || !targetDocument}>Mark as Duplicate</Button>
-          <Button variant="outline" className="text-warning" disabled={!sourceDocument || !targetDocument}>
+          <Button variant="primary" disabled={!sourceDocument || !targetDocument}>
+            <Copy size={16} /> Mark as Duplicate
+          </Button>
+          <Button variant="secondary" className="text-warning" disabled={!sourceDocument || !targetDocument}>
             <AlertTriangle size={16} /> Flag for Review
           </Button>
-          <Button variant="ghost" onClick={() => navigate('/documents')}>Choose Documents</Button>
+          <span className="action-separator" />
+          <Button variant="ghost" onClick={() => navigate('/documents')}>
+            <Files size={16} /> Choose Documents
+          </Button>
+          <div className="diff-legend">
+            <span><i className="legend-dot match" /> Match</span>
+            <span><i className="legend-dot diff" /> Difference</span>
+            <span><i className="legend-dot empty" /> Not set</span>
+          </div>
         </div>
 
-        {isLoading && <div className="compare-section">Loading comparison data...</div>}
+        {isLoading && <div className="compare-loading">Loading comparison data...</div>}
         {errorMsg && <div className="login-error">{errorMsg}</div>}
 
         {!isLoading && (
           <div className="compare-grid">
             {renderDocumentColumn('Source Document', sourceDocument, sourceFields, targetFields, true)}
-            <div className="compare-divider"></div>
             {renderDocumentColumn('Target Document', targetDocument, targetFields, sourceFields, false)}
           </div>
         )}

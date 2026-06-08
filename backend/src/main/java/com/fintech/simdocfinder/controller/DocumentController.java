@@ -1,9 +1,12 @@
 package com.fintech.simdocfinder.controller;
 
+import com.fintech.simdocfinder.model.dto.CompareRequest;
+import com.fintech.simdocfinder.model.dto.CompareResponse;
 import com.fintech.simdocfinder.model.dto.DocumentResponse;
 import com.fintech.simdocfinder.model.dto.DocumentUploadResponse;
 import com.fintech.simdocfinder.model.dto.SearchRequest;
 import com.fintech.simdocfinder.model.dto.SearchResponse;
+import com.fintech.simdocfinder.model.dto.SpreadsheetPreviewResponse;
 import com.fintech.simdocfinder.model.entity.User;
 import com.fintech.simdocfinder.repository.UserRepository;
 import com.fintech.simdocfinder.service.DocumentService;
@@ -17,6 +20,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @RestController
@@ -51,24 +56,27 @@ public class DocumentController {
     @GetMapping
     public ResponseEntity<Page<DocumentResponse>> getDocuments(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Page<DocumentResponse> response = documentService.getDocuments(PageRequest.of(page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) Integer days) {
+        Page<DocumentResponse> response = documentService.getDocuments(PageRequest.of(page, size), days);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<DocumentResponse> getDocument(@PathVariable UUID id) {
-        return ResponseEntity.ok(documentService.getDocumentById(id));
+    public ResponseEntity<DocumentResponse> getDocument(@PathVariable UUID id, Authentication authentication) {
+        return ResponseEntity.ok(documentService.getDocumentById(id, currentUser(authentication)));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDocument(@PathVariable UUID id, Authentication authentication, HttpServletRequest request) {
-        User user = null;
-        if (authentication != null) {
-            String username = authentication.getName();
-            user = userRepository.findByEmail(username).orElse(null);
-        }
+        User user = currentUser(authentication);
         documentService.softDeleteDocument(id, user, request.getRemoteAddr());
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}/erase")
+    public ResponseEntity<Void> eraseDocument(@PathVariable UUID id, Authentication authentication, HttpServletRequest request) {
+        documentService.eraseDocument(id, currentUser(authentication), request.getRemoteAddr());
         return ResponseEntity.noContent().build();
     }
 
@@ -79,11 +87,7 @@ public class DocumentController {
             Authentication authentication,
             HttpServletRequest request) {
 
-        User user = null;
-        if (authentication != null) {
-            String username = authentication.getName();
-            user = userRepository.findByEmail(username).orElse(null);
-        }
+        User user = currentUser(authentication);
         return ResponseEntity.ok(searchService.searchSimilar(queryFile, searchRequest, user, request.getRemoteAddr()));
     }
 
@@ -92,18 +96,22 @@ public class DocumentController {
             @PathVariable UUID id,
             @RequestParam(value = "topK", required = false, defaultValue = "10") int topK,
             @RequestParam(value = "threshold", required = false, defaultValue = "0.5") double threshold,
+            @RequestParam(value = "vendor", required = false) String vendor,
+            @RequestParam(value = "documentType", required = false) String documentType,
+            @RequestParam(value = "dateFrom", required = false) LocalDate dateFrom,
+            @RequestParam(value = "dateTo", required = false) LocalDate dateTo,
+            @RequestParam(value = "amountMin", required = false) BigDecimal amountMin,
+            @RequestParam(value = "amountMax", required = false) BigDecimal amountMax,
+            @RequestParam(value = "currency", required = false) String currency,
             Authentication authentication,
             HttpServletRequest request) {
 
-        User user = null;
-        if (authentication != null) {
-            String username = authentication.getName();
-            user = userRepository.findByEmail(username).orElse(null);
-        }
+        User user = currentUser(authentication);
 
         SearchRequest searchRequest = new SearchRequest();
         searchRequest.setTopK(topK);
         searchRequest.setThreshold(threshold);
+        searchRequest.setFilters(buildSearchFilters(vendor, documentType, dateFrom, dateTo, amountMin, amountMax, currency));
 
         return ResponseEntity.ok(searchService.searchByDocumentId(id, searchRequest, user, request.getRemoteAddr()));
     }
@@ -111,5 +119,48 @@ public class DocumentController {
     @GetMapping("/{id}/download")
     public ResponseEntity<org.springframework.core.io.Resource> downloadDocument(@PathVariable UUID id) {
         return documentService.downloadDocument(id);
+    }
+
+    @GetMapping("/{id}/spreadsheet-preview")
+    public ResponseEntity<SpreadsheetPreviewResponse> getSpreadsheetPreview(@PathVariable UUID id) {
+        return ResponseEntity.ok(documentService.getSpreadsheetPreview(id));
+    }
+
+    @PostMapping("/compare")
+    public ResponseEntity<CompareResponse> compareDocuments(
+            @RequestBody CompareRequest request,
+            Authentication authentication,
+            HttpServletRequest servletRequest) {
+        User user = currentUser(authentication);
+        return ResponseEntity.ok(documentService.compareDocuments(request, user, servletRequest.getRemoteAddr()));
+    }
+
+    private User currentUser(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        return userRepository.findByEmail(authentication.getName()).orElse(null);
+    }
+
+    private SearchRequest.SearchFilters buildSearchFilters(String vendor,
+                                                           String documentType,
+                                                           LocalDate dateFrom,
+                                                           LocalDate dateTo,
+                                                           BigDecimal amountMin,
+                                                           BigDecimal amountMax,
+                                                           String currency) {
+        SearchRequest.SearchFilters filters = new SearchRequest.SearchFilters();
+        filters.setVendor(blankToNull(vendor));
+        filters.setDocumentType(blankToNull(documentType));
+        filters.setDateFrom(dateFrom);
+        filters.setDateTo(dateTo);
+        filters.setAmountMin(amountMin);
+        filters.setAmountMax(amountMax);
+        filters.setCurrency(blankToNull(currency));
+        return filters;
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }

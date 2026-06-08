@@ -1,8 +1,11 @@
 package com.fintech.simdocfinder.service;
 
 import com.fintech.simdocfinder.embedding.EmbeddingClient;
+import com.fintech.simdocfinder.model.dto.CompareRequest;
+import com.fintech.simdocfinder.model.dto.CompareResponse;
 import com.fintech.simdocfinder.model.dto.DocumentResponse;
 import com.fintech.simdocfinder.model.dto.DocumentUploadResponse;
+import com.fintech.simdocfinder.model.dto.SpreadsheetPreviewResponse;
 import com.fintech.simdocfinder.model.entity.*;
 import com.fintech.simdocfinder.parser.ParserService;
 import com.fintech.simdocfinder.repository.DocumentChunkRepository;
@@ -12,6 +15,11 @@ import com.fintech.simdocfinder.repository.UserRepository;
 import com.fintech.simdocfinder.vector.QdrantService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,10 +29,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,14 +55,20 @@ public class DocumentService {
     private final TextCleaningService textCleaningService;
     private final ChunkingService chunkingService;
     private final MetadataExtractionService metadataExtractionService;
+    private final FileValidationService fileValidationService;
+    private final MalwareScanService malwareScanService;
     private final EmbeddingClient embeddingClient;
     private final QdrantService qdrantService;
     private final AuditService auditService;
     private final DuplicateDetectionService duplicateDetectionService;
     private final FraudDetectionService fraudDetectionService;
+    private final PiiMaskingService piiMaskingService;
 
     @Value("${file.storage-path:/tmp/simdocfinder/uploads}")
     private String fileStoragePath;
+
+    private static final int SPREADSHEET_PREVIEW_MAX_ROWS = 200;
+    private static final int SPREADSHEET_PREVIEW_MAX_COLUMNS = 50;
 
     @Transactional
     public DocumentUploadResponse uploadDocument(MultipartFile file, String documentType, String userIdStr, String ipAddress) {
@@ -67,10 +83,13 @@ public class DocumentService {
             throw new IllegalArgumentException("File size exceeds 50MB limit");
         }
 
+        FileValidationService.ValidationResult validation = fileValidationService.validate(file);
+        malwareScanService.scan(file);
+
         try {
             // Save file to disk
-            String filename = file.getOriginalFilename();
-            String extension = filename != null && filename.contains(".") ? filename.substring(filename.lastIndexOf(".")) : "";
+            String filename = validation.originalFilename();
+            String extension = "." + validation.extension();
             UUID documentId = UUID.randomUUID();
             String savedFilename = documentId + extension;
             Path storageDir = Paths.get(fileStoragePath);
@@ -85,7 +104,7 @@ public class DocumentService {
                     .id(documentId)
                     .uploadedBy(user)
                     .filename(filename)
-                    .fileType(file.getContentType())
+                    .fileType(validation.normalizedType())
                     .storagePath(targetPath.toString())
                     .processingStatus("processing")
                     .documentType(documentType)
@@ -176,12 +195,21 @@ public class DocumentService {
         }
     }
 
-    public Page<DocumentResponse> getDocuments(Pageable pageable) {
+    public Page<DocumentResponse> getDocuments(Pageable pageable, Integer days) {
+        if (days != null) {
+            LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
+            return documentRepository.findByIsDeletedFalseAndCreatedAtAfter(cutoff, pageable)
+                    .map(this::mapToResponse);
+        }
         return documentRepository.findByIsDeletedFalse(pageable)
                 .map(this::mapToResponse);
     }
 
     public DocumentResponse getDocumentById(UUID id) {
+        return getDocumentById(id, null);
+    }
+
+    public DocumentResponse getDocumentById(UUID id, User user) {
         Document document = documentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Document not found"));
         DocumentResponse response = mapToResponse(document);
@@ -192,8 +220,11 @@ public class DocumentService {
             List<String> chunkTexts = chunks.stream()
                     .map(DocumentChunk::getChunkText)
                     .collect(Collectors.toList());
-            response.setChunks(chunkTexts);
-            response.setExtractedText(String.join("\n\n", chunkTexts));
+            List<String> maskedChunks = chunkTexts.stream()
+                    .map(chunk -> piiMaskingService.maskForUser(chunk, user))
+                    .collect(Collectors.toList());
+            response.setChunks(maskedChunks);
+            response.setExtractedText(String.join("\n\n", maskedChunks));
         }
         
         return response;
@@ -211,6 +242,21 @@ public class DocumentService {
         qdrantService.deleteByDocumentId(id);
 
         auditService.logAction(user, "DOCUMENT_DELETE", "DOCUMENT", id.toString(), "Soft deleted document", ipAddress);
+    }
+
+    @Transactional
+    public void eraseDocument(UUID id, User user, String ipAddress) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Document not found"));
+
+        qdrantService.deleteByDocumentId(id);
+        try {
+            Files.deleteIfExists(Paths.get(document.getStoragePath()));
+        } catch (IOException e) {
+            log.warn("Unable to delete stored file for erased document {}: {}", id, e.getMessage());
+        }
+        documentRepository.delete(document);
+        auditService.logAction(user, "DOCUMENT_ERASE", "DOCUMENT", id.toString(), "Permanently erased document and vectors", ipAddress);
     }
 
     private DocumentResponse mapToResponse(Document doc) {
@@ -259,5 +305,103 @@ public class DocumentService {
             log.error("Error downloading file", e);
             throw new RuntimeException("Error downloading file: " + e.getMessage());
         }
+    }
+
+    public SpreadsheetPreviewResponse getSpreadsheetPreview(UUID id) {
+        Document document = documentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Document not found"));
+
+        Path path = Paths.get(document.getStoragePath());
+        DataFormatter formatter = new DataFormatter();
+        List<SpreadsheetPreviewResponse.SheetPreview> sheetPreviews = new ArrayList<>();
+
+        try (InputStream inputStream = Files.newInputStream(path);
+             Workbook workbook = WorkbookFactory.create(inputStream)) {
+
+            for (Sheet sheet : workbook) {
+                int originalRows = sheet.getLastRowNum() + 1;
+                int originalColumns = getMaxColumnCount(sheet);
+                int rowLimit = Math.min(originalRows, SPREADSHEET_PREVIEW_MAX_ROWS);
+                int columnLimit = Math.min(originalColumns, SPREADSHEET_PREVIEW_MAX_COLUMNS);
+                List<List<String>> rows = new ArrayList<>();
+
+                for (int rowIndex = 0; rowIndex < rowLimit; rowIndex++) {
+                    Row row = sheet.getRow(rowIndex);
+                    List<String> cells = new ArrayList<>();
+
+                    for (int columnIndex = 0; columnIndex < columnLimit; columnIndex++) {
+                        cells.add(row == null ? "" : formatter.formatCellValue(row.getCell(columnIndex)));
+                    }
+
+                    rows.add(cells);
+                }
+
+                sheetPreviews.add(SpreadsheetPreviewResponse.SheetPreview.builder()
+                        .name(sheet.getSheetName())
+                        .rows(rows)
+                        .truncated(originalRows > rowLimit || originalColumns > columnLimit)
+                        .originalRows(originalRows)
+                        .originalColumns(originalColumns)
+                        .build());
+            }
+
+            return SpreadsheetPreviewResponse.builder()
+                    .sheets(sheetPreviews)
+                    .maxRows(SPREADSHEET_PREVIEW_MAX_ROWS)
+                    .maxColumns(SPREADSHEET_PREVIEW_MAX_COLUMNS)
+                    .build();
+        } catch (Exception e) {
+            log.error("Error generating spreadsheet preview", e);
+            throw new RuntimeException("Error generating spreadsheet preview: " + e.getMessage(), e);
+        }
+    }
+
+    private int getMaxColumnCount(Sheet sheet) {
+        int maxColumns = 0;
+        for (Row row : sheet) {
+            if (row.getLastCellNum() > maxColumns) {
+                maxColumns = row.getLastCellNum();
+            }
+        }
+        return Math.max(maxColumns, 0);
+    }
+
+    public CompareResponse compareDocuments(CompareRequest request, User user, String ipAddress) {
+        UUID idA = request.getDocumentIdA();
+        UUID idB = request.getDocumentIdB();
+
+        Document docA = documentRepository.findById(idA)
+                .orElseThrow(() -> new RuntimeException("Document A not found"));
+        Document docB = documentRepository.findById(idB)
+                .orElseThrow(() -> new RuntimeException("Document B not found"));
+
+        DocumentMetadata metaA = documentMetadataRepository.findByDocumentId(idA).orElse(new DocumentMetadata());
+        DocumentMetadata metaB = documentMetadataRepository.findByDocumentId(idB).orElse(new DocumentMetadata());
+
+        // Simple metadata-based scoring (mimicking the frontend logic for backend validation)
+        int matchedFields = 0;
+        int totalFields = 5;
+
+        if (metaA.getVendor() != null && metaA.getVendor().equals(metaB.getVendor())) matchedFields++;
+        if (metaA.getInvoiceNumber() != null && metaA.getInvoiceNumber().equals(metaB.getInvoiceNumber())) matchedFields++;
+        if (metaA.getInvoiceDate() != null && metaA.getInvoiceDate().equals(metaB.getInvoiceDate())) matchedFields++;
+        if (metaA.getTotalAmount() != null && metaA.getTotalAmount().equals(metaB.getTotalAmount())) matchedFields++;
+        if (docA.getDocumentType() != null && docA.getDocumentType().equals(docB.getDocumentType())) matchedFields++;
+
+        double score = (double) matchedFields / totalFields;
+
+        String similarityLabel = "WEAK_MATCH";
+        if (score >= 0.8) similarityLabel = "STRONG_MATCH";
+        else if (score >= 0.4) similarityLabel = "RELATED";
+
+        auditService.logAction(user, "DOCUMENT_COMPARE", "DOCUMENT", idA.toString() + "," + idB.toString(), "Compared documents", ipAddress);
+
+        return CompareResponse.builder()
+                .documentIdA(idA)
+                .documentIdB(idB)
+                .score(score)
+                .similarityLabel(similarityLabel)
+                .isDuplicateCandidate(score >= 0.8)
+                .build();
     }
 }

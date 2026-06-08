@@ -91,6 +91,34 @@
   background-color: white;
 }
 
+.document-pdf-scroll {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.document-pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 100%;
+  padding: var(--space-4);
+}
+
+.document-pdf-page {
+  max-width: 100%;
+  background-color: white;
+  border: 1px solid var(--slate-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.document-pdf-page canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 .document-popup-image {
   display: block;
   max-width: 100%;
@@ -98,6 +126,86 @@
   margin: auto;
   object-fit: contain;
   background-color: white;
+}
+
+.document-sheet-preview {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+}
+
+.document-sheet-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--slate-200);
+  background-color: var(--slate-50);
+  overflow-x: auto;
+}
+
+.document-sheet-tab {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  color: var(--slate-600);
+  background-color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.document-sheet-tab.active {
+  color: white;
+  border-color: var(--navy-600);
+  background-color: var(--navy-600);
+}
+
+.document-sheet-note {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  color: var(--slate-500);
+  border-bottom: 1px solid var(--slate-200);
+  background-color: var(--warning-50, #fff7ed);
+  font-size: 12px;
+}
+
+.document-sheet-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.document-sheet-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  color: var(--slate-700);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+}
+
+.document-sheet-table td {
+  min-width: 120px;
+  max-width: 320px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--slate-200);
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.document-sheet-table tr:first-child td {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--navy-900);
+  background-color: var(--slate-100);
+  font-weight: 700;
 }
 
 .document-popup-state {
