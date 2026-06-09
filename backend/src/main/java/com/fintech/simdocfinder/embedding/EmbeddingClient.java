@@ -74,4 +74,19 @@ public class EmbeddingClient {
             throw new RuntimeException("Batch embedding service failed", e);
         }
     }
+
+    public boolean healthCheck() {
+        try {
+            Map<String, Object> response = webClient.get()
+                    .uri("/health")
+                    .retrieve()
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .block(Duration.ofSeconds(2));
+
+            return response != null && "healthy".equalsIgnoreCase(String.valueOf(response.get("status")));
+        } catch (Exception e) {
+            log.warn("Embedding service health check failed: {}", e.getMessage());
+            return false;
+        }
+    }
 }

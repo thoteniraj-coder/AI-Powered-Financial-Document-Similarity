@@ -2,6 +2,8 @@ package com.fintech.simdocfinder.model.dto;
 
 import lombok.Builder;
 import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
@@ -12,6 +14,9 @@ public class SearchResultItem {
     private String vendor;
     private String invoiceNumber;
     private String documentType;
+    private LocalDate invoiceDate;
+    private BigDecimal totalAmount;
+    private String currency;
     private Double similarityScore;
     private Integer rank;
     private String matchedSnippet;

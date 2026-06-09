@@ -1,0 +1,572 @@
+<h2 class="sr-only">FinDoc AI Dashboard — financial document similarity finder showing uploads, alerts, and recent activity</h2>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+
+.dash { display: flex; min-height: 100vh; background: var(--color-background-tertiary); }
+
+.sidebar {
+  width: 56px;
+  background: var(--color-background-primary);
+  border-right: 0.5px solid var(--color-border-tertiary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.logo-mark {
+  width: 32px; height: 32px;
+  background: #1a56db;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 13px; font-weight: 500;
+  margin-bottom: 12px;
+}
+.nav-item {
+  width: 36px; height: 36px;
+  border-radius: var(--border-radius-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.nav-item:hover { background: var(--color-background-secondary); }
+.nav-item.active { background: #EBF3FF; color: #1a56db; }
+.nav-item i { font-size: 18px; }
+.nav-sep { width: 28px; height: 0.5px; background: var(--color-border-tertiary); margin: 4px 0; }
+
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.topbar {
+  background: var(--color-background-primary);
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  padding: 0 20px;
+  height: 52px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.page-title { font-size: 15px; font-weight: 500; color: var(--color-text-primary); }
+.breadcrumb { font-size: 12px; color: var(--color-text-secondary); }
+
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.search-wrap {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--color-background-secondary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  padding: 5px 10px;
+  width: 200px;
+}
+.search-wrap i { font-size: 14px; color: var(--color-text-secondary); }
+.search-wrap span { font-size: 13px; color: var(--color-text-secondary); }
+
+.icon-btn {
+  width: 32px; height: 32px;
+  border-radius: var(--border-radius-md);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  position: relative;
+}
+.icon-btn:hover { background: var(--color-background-secondary); }
+.icon-btn i { font-size: 16px; }
+.badge {
+  position: absolute; top: 4px; right: 4px;
+  width: 8px; height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-background-primary);
+}
+
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #1a56db;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; color: #fff;
+  cursor: pointer;
+}
+
+.content { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
+
+.date-bar {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.date-label { font-size: 12px; color: var(--color-text-secondary); }
+.date-selector {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-md);
+  padding: 5px 10px;
+  font-size: 12px; color: var(--color-text-primary);
+  cursor: pointer;
+}
+.date-selector i { font-size: 14px; color: var(--color-text-secondary); }
+
+.upload-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: #1a56db;
+  border-radius: var(--border-radius-md);
+  padding: 6px 12px;
+  font-size: 12px; font-weight: 500; color: #fff;
+  cursor: pointer;
+}
+.upload-btn i { font-size: 14px; }
+
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+.stat-card {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 16px 18px;
+}
+.stat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stat-icon {
+  width: 32px; height: 32px;
+  border-radius: var(--border-radius-md);
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-icon i { font-size: 16px; }
+.stat-icon.blue { background: #EBF3FF; color: #1a56db; }
+.stat-icon.amber { background: #FEF3C7; color: #B45309; }
+.stat-icon.red { background: #FEE2E2; color: #B91C1C; }
+.stat-icon.green { background: #D1FAE5; color: #065F46; }
+
+.stat-trend {
+  font-size: 11px; padding: 2px 6px;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+.stat-trend.up { background: #D1FAE5; color: #065F46; }
+.stat-trend.down { background: #FEE2E2; color: #B91C1C; }
+.stat-trend.neutral { background: var(--color-background-secondary); color: var(--color-text-secondary); }
+
+.stat-val { font-size: 24px; font-weight: 500; color: var(--color-text-primary); line-height: 1; margin-bottom: 4px; }
+.stat-lbl { font-size: 12px; color: var(--color-text-secondary); }
+
+.middle-row { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+
+.panel {
+  background: var(--color-background-primary);
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+}
+.panel-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px 0;
+  margin-bottom: 12px;
+}
+.panel-title { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.view-all { font-size: 12px; color: #1a56db; cursor: pointer; }
+
+.chart-wrap { padding: 0 18px 16px; }
+.chart-legend {
+  display: flex; gap: 16px; margin-bottom: 10px;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--color-text-secondary); }
+.legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+.bottom-row { display: grid; grid-template-columns: 1fr 340px; gap: 16px; }
+
+.table-wrap { overflow: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left;
+  font-size: 11px; font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: 6px 18px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 0.5px solid var(--color-border-tertiary); cursor: pointer; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover td { background: var(--color-background-secondary); }
+tbody td { padding: 10px 18px; font-size: 13px; color: var(--color-text-primary); white-space: nowrap; }
+.doc-id { font-family: var(--font-mono); font-size: 12px; color: var(--color-text-secondary); }
+.vendor-name { font-weight: 500; }
+.type-chip {
+  display: inline-flex; align-items: center;
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 9999px;
+}
+.type-chip.invoice { background: #EBF3FF; color: #1E429F; }
+.type-chip.receipt { background: #D1FAE5; color: #064E3B; }
+.type-chip.bank { background: #F5F3FF; color: #4C1D95; }
+.status-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 9999px;
+}
+.status-chip.completed { background: #D1FAE5; color: #065F46; }
+.status-chip.processing { background: #FEF3C7; color: #92400E; }
+.status-chip::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+.status-chip.completed::before { background: #059669; }
+.status-chip.processing::before { background: #D97706; }
+.more-btn { color: var(--color-text-secondary); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.more-btn:hover { background: var(--color-background-secondary); }
+
+.alerts-panel { display: flex; flex-direction: column; }
+.alerts-tabs {
+  display: flex; gap: 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  padding: 0 18px;
+  margin-bottom: 0;
+}
+.atab {
+  font-size: 12px; font-weight: 500;
+  padding: 8px 12px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -0.5px;
+}
+.atab.active { color: #1a56db; border-bottom-color: #1a56db; }
+
+.alert-list { flex: 1; overflow: auto; padding: 8px 0; }
+.alert-item {
+  display: flex; gap: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.alert-item:hover { background: var(--color-background-secondary); }
+.sev-badge {
+  flex-shrink: 0;
+  font-size: 10px; font-weight: 500;
+  padding: 2px 6px; border-radius: 4px;
+  height: fit-content;
+  margin-top: 1px;
+}
+.sev-badge.high { background: #FEE2E2; color: #B91C1C; }
+.sev-badge.medium { background: #FEF3C7; color: #92400E; }
+.sev-badge.low { background: #D1FAE5; color: #065F46; }
+.alert-body { flex: 1; min-width: 0; }
+.alert-type { font-size: 12px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px; }
+.alert-desc { font-size: 11px; color: var(--color-text-secondary); line-height: 1.4; }
+.alert-meta { font-size: 10px; color: var(--color-text-secondary); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+.status-new { font-size: 10px; font-weight: 500; padding: 1px 5px; border-radius: 9999px; background: #EBF3FF; color: #1E429F; }
+
+.mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 18px; }
+.mini-stat {
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 12px;
+}
+.mini-stat-val { font-size: 18px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px; }
+.mini-stat-lbl { font-size: 11px; color: var(--color-text-secondary); }
+
+.activity-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 18px;
+}
+.act-dot {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.act-dot.upload { background: #EBF3FF; color: #1a56db; }
+.act-dot.alert { background: #FEE2E2; color: #B91C1C; }
+.act-dot.search { background: #D1FAE5; color: #065F46; }
+.act-dot i { font-size: 12px; }
+.act-text { font-size: 12px; color: var(--color-text-primary); line-height: 1.4; }
+.act-time { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+</style>
+
+<div class="dash">
+  <div class="sidebar">
+    <div class="logo-mark">FA</div>
+    <div class="nav-item active" title="Dashboard"><i class="ti ti-layout-dashboard" aria-hidden="true"></i></div>
+    <div class="nav-item" title="Documents"><i class="ti ti-file-text" aria-hidden="true"></i></div>
+    <div class="nav-item" title="Search"><i class="ti ti-search" aria-hidden="true"></i></div>
+    <div class="nav-item" title="Alerts"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div>
+    <div class="nav-sep"></div>
+    <div class="nav-item" title="Audit Trail"><i class="ti ti-clipboard-list" aria-hidden="true"></i></div>
+    <div class="nav-item" title="Settings"><i class="ti ti-settings" aria-hidden="true"></i></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="page-title">Dashboard</span>
+        <span class="breadcrumb" style="color:var(--color-border-tertiary)">|</span>
+        <span class="breadcrumb">Overview</span>
+      </div>
+      <div class="topbar-right">
+        <div class="search-wrap">
+          <i class="ti ti-search" aria-hidden="true"></i>
+          <span>Search documents…</span>
+        </div>
+        <div class="icon-btn" title="Notifications" aria-label="Notifications">
+          <i class="ti ti-bell" aria-hidden="true"></i>
+          <div class="badge"></div>
+        </div>
+        <div class="avatar">SY</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="date-bar">
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px">Good morning, Niraj</div>
+          <div class="date-label">Thursday, June 5, 2026 · Finance Operations</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="date-selector"><i class="ti ti-calendar" aria-hidden="true"></i> Last 30 days <i class="ti ti-chevron-down" aria-hidden="true"></i></div>
+          <div class="upload-btn"><i class="ti ti-upload" aria-hidden="true"></i> Upload document</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon blue"><i class="ti ti-files" aria-hidden="true"></i></div>
+            <span class="stat-trend up">+12%</span>
+          </div>
+          <div class="stat-val">10</div>
+          <div class="stat-lbl">Documents uploaded</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon amber"><i class="ti ti-copy" aria-hidden="true"></i></div>
+            <span class="stat-trend down">+4</span>
+          </div>
+          <div class="stat-val">13</div>
+          <div class="stat-lbl">Duplicates found</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon red"><i class="ti ti-alert-triangle" aria-hidden="true"></i></div>
+            <span class="stat-trend down">High</span>
+          </div>
+          <div class="stat-val">12</div>
+          <div class="stat-lbl">High-risk alerts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <div class="stat-icon green"><i class="ti ti-clock" aria-hidden="true"></i></div>
+            <span class="stat-trend neutral">Pending</span>
+          </div>
+          <div class="stat-val">13</div>
+          <div class="stat-lbl">Pending reviews</div>
+        </div>
+      </div>
+
+      <div class="middle-row">
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">Document activity</span>
+            <div style="display:flex;gap:12px;align-items:center">
+              <div class="chart-legend" style="margin:0">
+                <span class="legend-item"><span class="legend-dot" style="background:#1a56db"></span> Uploaded</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> Duplicates</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Alerts</span>
+              </div>
+              <span class="view-all">Export</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <div style="position:relative;width:100%;height:180px;">
+              <canvas id="actChart" role="img" aria-label="Bar chart showing monthly document uploads, duplicates and alerts over 6 months">Monthly document activity data for Jan through Jun 2026.</canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="display:flex;flex-direction:column;">
+          <div class="panel-hdr">
+            <span class="panel-title">Document types</span>
+          </div>
+          <div style="padding:0 18px;display:flex;gap:12px;align-items:center;flex:1;">
+            <div style="position:relative;width:120px;height:120px;flex-shrink:0;">
+              <canvas id="typeChart" role="img" aria-label="Donut chart of document type distribution">Invoice 60%, Bank statement 25%, Receipt 15%.</canvas>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary);"><span style="width:8px;height:8px;border-radius:2px;background:#1a56db;display:inline-block;"></span>Invoice</span>
+                <span style="font-size:12px;font-weight:500;color:var(--color-text-primary);">60%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary);"><span style="width:8px;height:8px;border-radius:2px;background:#7c3aed;display:inline-block;"></span>Bank stmt</span>
+                <span style="font-size:12px;font-weight:500;color:var(--color-text-primary);">25%</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-secondary);"><span style="width:8px;height:8px;border-radius:2px;background:#059669;display:inline-block;"></span>Receipt</span>
+                <span style="font-size:12px;font-weight:500;color:var(--color-text-primary);">15%</span>
+              </div>
+              <div style="margin-top:4px;padding-top:8px;border-top:0.5px solid var(--color-border-tertiary);">
+                <div style="font-size:11px;color:var(--color-text-secondary);">Avg similarity score</div>
+                <div style="font-size:18px;font-weight:500;color:var(--color-text-primary);">87.3%</div>
+              </div>
+            </div>
+          </div>
+          <div style="height:16px;"></div>
+        </div>
+      </div>
+
+      <div class="bottom-row">
+        <div class="panel">
+          <div class="panel-hdr">
+            <span class="panel-title">Recent uploads</span>
+            <span class="view-all">View all</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Document ID</th>
+                  <th>Vendor</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Uploaded</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="doc-id">3337</span></td>
+                  <td><span class="vendor-name">DEMO – Sliced Invoices</span></td>
+                  <td><span class="type-chip invoice">invoice</span></td>
+                  <td><span class="status-chip completed">Completed</span></td>
+                  <td style="color:var(--color-text-secondary);font-size:12px;">01/06/2026 18:38</td>
+                  <td><span class="more-btn"><i class="ti ti-dots-vertical" style="font-size:14px;" aria-label="More options"></i></span></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-id">3337</span></td>
+                  <td><span class="vendor-name">DEMO – Sliced Invoices</span></td>
+                  <td><span class="type-chip invoice">invoice</span></td>
+                  <td><span class="status-chip completed">Completed</span></td>
+                  <td style="color:var(--color-text-secondary);font-size:12px;">01/06/2026 18:49</td>
+                  <td><span class="more-btn"><i class="ti ti-dots-vertical" style="font-size:14px;" aria-label="More options"></i></span></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-id">2026-001</span></td>
+                  <td><span class="vendor-name">Acme Technology Solutions Inc.</span></td>
+                  <td><span class="type-chip invoice">invoice</span></td>
+                  <td><span class="status-chip completed">Completed</span></td>
+                  <td style="color:var(--color-text-secondary);font-size:12px;">03/06/2026 18:12</td>
+                  <td><span class="more-btn"><i class="ti ti-dots-vertical" style="font-size:14px;" aria-label="More options"></i></span></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-id">2026-002</span></td>
+                  <td><span class="vendor-name">Acme Technology Solutions Inc.</span></td>
+                  <td><span class="type-chip invoice">invoice</span></td>
+                  <td><span class="status-chip completed">Completed</span></td>
+                  <td style="color:var(--color-text-secondary);font-size:12px;">03/06/2026 18:12</td>
+                  <td><span class="more-btn"><i class="ti ti-dots-vertical" style="font-size:14px;" aria-label="More options"></i></span></td>
+                </tr>
+                <tr>
+                  <td><span class="doc-id">af00b575</span></td>
+                  <td><span class="vendor-name" style="color:var(--color-text-secondary);">—</span></td>
+                  <td><span class="type-chip bank">bank stmt</span></td>
+                  <td><span class="status-chip processing">Processing</span></td>
+                  <td style="color:var(--color-text-secondary);font-size:12px;">03/06/2026 18:12</td>
+                  <td><span class="more-btn"><i class="ti ti-dots-vertical" style="font-size:14px;" aria-label="More options"></i></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel alerts-panel">
+          <div class="panel-hdr" style="margin-bottom:0;">
+            <span class="panel-title">Active alerts</span>
+            <span class="view-all">View all</span>
+          </div>
+          <div class="alerts-tabs">
+            <div class="atab active">All <span style="background:#EBF3FF;color:#1E429F;border-radius:9999px;padding:1px 5px;font-size:10px;margin-left:3px;">9</span></div>
+            <div class="atab">High <span style="background:#FEE2E2;color:#B91C1C;border-radius:9999px;padding:1px 5px;font-size:10px;margin-left:3px;">3</span></div>
+            <div class="atab">Medium</div>
+          </div>
+          <div class="alert-list">
+            <div class="alert-item">
+              <span class="sev-badge high">HIGH</span>
+              <div class="alert-body">
+                <div class="alert-type">Confirmed duplicate</div>
+                <div class="alert-desc">Exact invoice match detected — INV-3337 appears twice</div>
+                <div class="alert-meta"><i class="ti ti-file-text" style="font-size:11px;" aria-hidden="true"></i> 2 documents · <span class="status-new">NEW</span></div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <span class="sev-badge high">HIGH</span>
+              <div class="alert-body">
+                <div class="alert-type">Confirmed duplicate</div>
+                <div class="alert-desc">Invoice 2026-001 and 2026-002 are near-identical</div>
+                <div class="alert-meta"><i class="ti ti-building-2" style="font-size:11px;" aria-hidden="true"></i> Acme Technology · <span class="status-new">NEW</span></div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <span class="sev-badge medium">MED</span>
+              <div class="alert-body">
+                <div class="alert-type">Unusual amount</div>
+                <div class="alert-desc">Amount 340% above 6-month vendor average</div>
+                <div class="alert-meta"><i class="ti ti-chart-bar" style="font-size:11px;" aria-hidden="true"></i> Globex Ltd · 2h ago</div>
+              </div>
+            </div>
+            <div class="alert-item">
+              <span class="sev-badge high">HIGH</span>
+              <div class="alert-body">
+                <div class="alert-type">Confirmed duplicate</div>
+                <div class="alert-desc">Exact invoice duplicate detected in af00b575</div>
+                <div class="alert-meta"><i class="ti ti-file-text" style="font-size:11px;" aria-hidden="true"></i> Bank stmt · <span class="status-new">NEW</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+new Chart(document.getElementById('actChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    datasets: [
+      { label: 'Uploaded', data: [4, 7, 5, 9, 6, 10], backgroundColor: '#1a56db', borderRadius: 3, borderSkipped: false },
+      { label: 'Duplicates', data: [1, 2, 1, 4, 3, 5], backgroundColor: '#f59e0b', borderRadius: 3, borderSkipped: false },
+      { label: 'Alerts', data: [0, 1, 2, 3, 2, 4], backgroundColor: '#ef4444', borderRadius: 3, borderSkipped: false }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#6b7280' } },
+      y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, color: '#6b7280', stepSize: 2 }, border: { display: false } }
+    },
+    barPercentage: 0.6,
+    categoryPercentage: 0.8
+  }
+});
+
+new Chart(document.getElementById('typeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Invoice', 'Bank statement', 'Receipt'],
+    datasets: [{
+      data: [60, 25, 15],
+      backgroundColor: ['#1a56db', '#7c3aed', '#059669'],
+      borderWidth: 2,
+      borderColor: '#ffffff',
+      hoverOffset: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}%` } } }
+  }
+});
+</script>

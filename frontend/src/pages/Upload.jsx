@@ -5,6 +5,7 @@ import { File, X, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucid
 import FileDropZone from '../components/Upload/FileDropZone';
 import ProcessingPipeline from '../components/Upload/ProcessingPipeline';
 import { Button } from '../components/common/Button';
+import { uploadDocument } from '../api/documents';
 import './Upload.css';
 
 const Upload = () => {
@@ -41,25 +42,22 @@ const Upload = () => {
     setMetadata(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
     
     setUploadState('processing');
     setCurrentStep('uploading');
-    
-    // Mock progression
-    const steps = ['uploading', 'extracting', 'ocr', 'chunking', 'embedding', 'storing', 'complete'];
-    let stepIdx = 0;
-    
-    const interval = setInterval(() => {
-      stepIdx++;
-      if (stepIdx >= steps.length) {
-        clearInterval(interval);
-        setUploadState('complete');
-      } else {
-        setCurrentStep(steps[stepIdx]);
-      }
-    }, 1500);
+    setErrorMsg(null);
+
+    try {
+      setCurrentStep('extracting');
+      await uploadDocument(file, metadata);
+      setCurrentStep('complete');
+      setUploadState('complete');
+    } catch (error) {
+      setUploadState('error');
+      setErrorMsg(error.response?.data?.message || error.message || 'Upload failed. Please try again.');
+    }
   };
 
   return (
@@ -117,13 +115,13 @@ const Upload = () => {
                       
                       <div className="form-group">
                         <label>Vendor / Sender</label>
-                        <input type="text" name="vendor" value={metadata.vendor} onChange={handleMetadataChange} placeholder="e.g., Acme Corp" />
+                        <input type="text" name="vendor" value={metadata.vendor} onChange={handleMetadataChange} placeholder="Vendor name" />
                       </div>
                       
                       <div className="form-row">
                         <div className="form-group half">
                           <label>Document Number</label>
-                          <input type="text" name="invoiceNumber" value={metadata.invoiceNumber} onChange={handleMetadataChange} placeholder="INV-12345" />
+                          <input type="text" name="invoiceNumber" value={metadata.invoiceNumber} onChange={handleMetadataChange} placeholder="Invoice number" />
                         </div>
                         <div className="form-group half">
                           <label>Date</label>
@@ -178,6 +176,18 @@ const Upload = () => {
               <div className="success-actions">
                 <Button variant="outline" onClick={handleClearFile}>Upload Another</Button>
                 <Button variant="primary" onClick={() => navigate('/search')}>Search Similar</Button>
+              </div>
+            </div>
+          )}
+
+          {uploadState === 'error' && (
+            <div className="error-state">
+              <AlertCircle size={48} className="error-icon" />
+              <h3 className="state-title">Upload Failed</h3>
+              <p className="state-subtitle">{errorMsg}</p>
+              <div className="success-actions">
+                <Button variant="outline" onClick={handleClearFile}>Choose Another File</Button>
+                <Button variant="primary" onClick={handleUpload}>Try Again</Button>
               </div>
             </div>
           )}

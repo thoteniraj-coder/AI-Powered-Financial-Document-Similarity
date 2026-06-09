@@ -26,4 +26,6 @@ public class DocumentResponse {
     private Boolean ocrUsed;
     private String uploadedBy;
     private LocalDateTime uploadedAt;
+    private String extractedText;
+    private java.util.List<String> chunks;
 }

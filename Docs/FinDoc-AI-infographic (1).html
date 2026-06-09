@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:'Lora';src:url('/usr/share/fonts/truetype/google-fonts/Lora-Variable.ttf');font-weight:400 700;font-style:normal;}
+@font-face{font-family:'Lora';src:url('/usr/share/fonts/truetype/google-fonts/Lora-Italic-Variable.ttf');font-weight:400 700;font-style:italic;}
+@font-face{font-family:'Poppins';src:url('/usr/share/fonts/truetype/google-fonts/Poppins-Regular.ttf');font-weight:400;}
+@font-face{font-family:'Poppins';src:url('/usr/share/fonts/truetype/google-fonts/Poppins-Medium.ttf');font-weight:500;}
+@font-face{font-family:'Poppins';src:url('/usr/share/fonts/truetype/google-fonts/Poppins-Bold.ttf');font-weight:700;}
+@font-face{font-family:'Mono';src:url('/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf');font-weight:400;}
+@font-face{font-family:'Mono';src:url('/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf');font-weight:700;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{width:1050px;font-family:'Poppins',sans-serif;background:#e9edf1;color:#1f2b39;}
+.page{width:1050px;background:#e9edf1;}
+.row:after{content:"";display:table;clear:both;}
+.col{float:left;}
+svg{display:block;}
+.ic{fill:none;stroke:#2a8a86;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.icn{fill:none;stroke:#173a5e;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
+.icw{fill:none;stroke:#ffffff;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ---------- HEADER ---------- */
+.header{position:relative;height:212px;background:#0d2440;background:-webkit-linear-gradient(left,#0a1d33,#123career);background:-webkit-linear-gradient(left,#0a1d33,#14365c);overflow:hidden;}
+.hglow{position:absolute;right:0;top:0;width:520px;height:212px;background:-webkit-radial-gradient(75% 30%,circle,rgba(58,150,210,.35),rgba(10,29,51,0) 60%);}
+.hl{position:absolute;left:0;top:0;width:6px;height:212px;background:#e0a13c;}
+.hicon{position:absolute;left:24px;top:34px;width:120px;height:120px;}
+.htext{position:absolute;left:168px;top:24px;}
+.kicker{font-family:'Poppins';font-weight:700;font-size:21px;letter-spacing:1px;color:#e0a13c;}
+.title{font-family:'Lora';font-weight:700;font-size:50px;line-height:1.02;color:#fff;margin-top:-2px;}
+.subtitle{margin-top:12px;font-size:15px;color:#aebfd4;line-height:1.45;font-weight:400;max-width:560px;}
+.hart{position:absolute;right:18px;top:14px;width:330px;height:184px;}
+
+/* ---------- GENERIC PANEL ---------- */
+.body{padding:20px;}
+.panel{background:#fff;border-radius:14px;box-shadow:0 8px 22px rgba(20,40,70,.08);border:1px solid #e3e8ee;}
+.pad{padding:18px 20px;}
+.sechead{margin-bottom:14px;}
+.snum{display:inline-block;width:30px;height:30px;border-radius:50%;background:#173a5e;color:#fff;font-family:'Poppins';font-weight:700;font-size:15px;text-align:center;line-height:30px;vertical-align:middle;margin-right:10px;}
+.stitle{font-family:'Lora';font-weight:700;font-size:22px;color:#15304f;vertical-align:middle;}
+.muted{color:#5b6675;}
+
+/* chips/icons */
+.chip{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:#e3f1ef;vertical-align:top;}
+.chip svg{width:22px;height:22px;}
+.chipn{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:#e8eef6;vertical-align:top;}
+.chipn svg{width:22px;height:22px;}
+
+/* list item (sec1) */
+.li{margin-bottom:14px;}
+.li .chip{margin-right:12px;}
+.li .txt{display:inline-block;width:230px;font-size:13.5px;line-height:1.42;color:#33414f;vertical-align:middle;}
+
+/* upload flow (sec3) */
+.ufrow{margin-bottom:13px;}
+.ufnum{display:inline-block;width:26px;height:26px;border-radius:50%;background:#e3f1ef;color:#1f8f86;font-weight:700;font-size:13px;text-align:center;line-height:26px;vertical-align:middle;margin-right:6px;}
+.ufic{display:inline-flex;align-items:center;justify-content:center;width:34px;vertical-align:middle;}
+.ufic svg{width:22px;height:22px;}
+.uftx{display:inline-block;width:210px;font-size:13px;line-height:1.35;color:#33414f;vertical-align:middle;}
+.badge{margin-top:6px;background:#eef6f4;border:1px solid #cfe6e1;border-radius:10px;padding:11px 14px;font-size:14px;font-weight:500;color:#1f6b64;}
+.badge svg{display:inline-block;width:20px;height:20px;vertical-align:middle;margin-right:8px;}
+
+/* architecture (sec2) */
+.archbox{position:relative;width:610px;height:360px;margin:4px auto 0;}
+.archbox svg.wires{position:absolute;left:0;top:0;z-index:0;}
+.abx{position:absolute;z-index:1;border-radius:12px;text-align:center;}
+.abx .lab{font-weight:700;font-size:14px;color:#23303f;line-height:1.15;}
+.abx .port{font-family:'Mono';font-size:12px;color:#5b6675;margin-top:2px;}
+.arrowcap{text-align:center;font-style:italic;color:#5b6675;font-size:13.5px;margin-top:8px;font-family:'Lora';}
+
+/* search flow (sec4) */
+.sfcell{display:inline-block;width:104px;vertical-align:top;text-align:center;white-space:normal;}
+.sfarrow{display:inline-block;width:18px;vertical-align:top;text-align:center;padding-top:22px;}
+.sfcirc{display:flex;align-items:center;justify-content:center;width:58px;height:58px;border-radius:50%;background:#173a5e;margin:0 auto 8px;}
+.sfcirc svg{width:28px;height:28px;}
+.sflab{font-size:11.5px;line-height:1.3;color:#33414f;}
+.thr{display:inline-block;background:#fdf4e1;border:1px solid #f0dcae;border-radius:10px;padding:9px 16px;font-weight:600;color:#a06a14;font-size:14px;margin:14px 0 12px;}
+.thr svg{display:inline-block;width:18px;height:18px;vertical-align:middle;margin-right:6px;}
+.guide{font-weight:600;font-size:13px;color:#33414f;margin-bottom:8px;}
+.grow{margin-bottom:7px;}
+.gband{display:inline-block;width:92px;height:26px;border-radius:6px;color:#fff;font-weight:700;font-size:12px;text-align:center;line-height:26px;vertical-align:middle;margin-right:10px;}
+.glab{display:inline-block;font-size:12.5px;color:#33414f;vertical-align:middle;}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.tbl th{text-align:left;color:#5b6675;font-weight:600;font-size:11px;border-bottom:1px solid #e3e8ee;padding:5px 6px;}
+.tbl td{padding:6px 6px;border-bottom:1px solid #eef1f4;vertical-align:middle;}
+.rkn{display:inline-block;width:18px;height:18px;border-radius:50%;color:#fff;font-size:11px;font-weight:700;text-align:center;line-height:18px;}
+.sbar{height:7px;border-radius:4px;display:inline-block;vertical-align:middle;}
+
+/* tech stack (sec5) */
+.trow{margin-bottom:11px;}
+.trow .ci{display:inline-flex;align-items:center;justify-content:center;width:26px;vertical-align:middle;}
+.trow .ci svg{width:20px;height:20px;}
+.trow .nm{display:inline-block;width:96px;font-weight:600;font-size:13px;color:#23303f;vertical-align:middle;}
+.trow .vl{display:inline-block;font-size:12.5px;color:#5b6675;vertical-align:middle;}
+
+/* security (sec6) */
+.srow{margin-bottom:16px;}
+.srow .ci{display:inline-flex;align-items:flex-start;justify-content:center;width:34px;vertical-align:top;}
+.srow .ci svg{width:24px;height:24px;}
+.srow .tx{display:inline-block;width:160px;font-size:12.8px;line-height:1.35;color:#33414f;vertical-align:top;}
+
+/* performance (sec7) */
+.pcell{display:inline-block;width:88px;vertical-align:top;text-align:center;}
+.pcell .pic{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:10px;background:#e8eef6;margin:0 auto 7px;}
+.pcell .pic svg{width:24px;height:24px;}
+.pcell .plab{font-size:11px;color:#5b6675;line-height:1.25;min-height:28px;}
+.pcell .pval{font-weight:700;font-size:17px;color:#15304f;margin-top:4px;}
+.pcell .psub{font-size:10px;color:#8a96a4;}
+
+/* apis (sec8) */
+.atbl{width:100%;border-collapse:collapse;}
+.atbl td{padding:7px 6px;border-bottom:1px solid #eef1f4;vertical-align:middle;font-size:12.5px;}
+.mth{display:inline-block;width:64px;text-align:center;color:#fff;font-family:'Mono';font-weight:700;font-size:11px;padding:4px 0;border-radius:5px;}
+.path{font-family:'Mono';font-size:12.5px;color:#23303f;}
+.adesc{color:#5b6675;}
+
+/* why (sec9) */
+.why{position:relative;border-radius:14px;background:#0d2440;background:-webkit-linear-gradient(left,#0a1d33,#14365c);padding:20px 24px;color:#fff;overflow:hidden;}
+.wcell{display:inline-block;vertical-align:middle;}
+.wic{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.08);vertical-align:middle;margin-right:12px;}
+.wic svg{width:24px;height:24px;}
+.wtx{display:inline-block;font-size:13.5px;line-height:1.35;color:#dde6f1;vertical-align:middle;}
+.wart{position:absolute;right:18px;top:8px;width:190px;height:120px;}
+
+.footer{text-align:center;padding:16px;background:#0a1d33;color:#9fb1c8;font-style:italic;font-family:'Lora';font-size:14px;}
+.footer .dots{letter-spacing:3px;color:#3d5874;}
+</style></head>
+<body>
+<div class="page">
+
+  <!-- ===================== HEADER ===================== -->
+  <div class="header">
+    <div class="hl"></div>
+    <div class="hglow"></div>
+    <!-- magnifier + doc icon -->
+    <svg class="hicon" viewBox="0 0 120 120">
+      <rect x="14" y="10" width="64" height="86" rx="6" fill="#f4f7fb" stroke="#c9d6e6" stroke-width="2"/>
+      <line x1="26" y1="28" x2="58" y2="28" stroke="#9fb2cb" stroke-width="3" stroke-linecap="round"/>
+      <line x1="26" y1="40" x2="66" y2="40" stroke="#9fb2cb" stroke-width="3" stroke-linecap="round"/>
+      <line x1="26" y1="52" x2="50" y2="52" stroke="#9fb2cb" stroke-width="3" stroke-linecap="round"/>
+      <rect x="40" y="60" width="8" height="22" fill="#3a86c8"/>
+      <rect x="52" y="52" width="8" height="30" fill="#2a8a86"/>
+      <circle cx="74" cy="70" r="26" fill="rgba(58,134,200,.12)" stroke="#e0a13c" stroke-width="6"/>
+      <circle cx="74" cy="70" r="15" fill="none" stroke="#7fb4e6" stroke-width="3"/>
+      <line x1="92" y1="88" x2="108" y2="104" stroke="#e0a13c" stroke-width="8" stroke-linecap="round"/>
+    </svg>
+    <div class="htext">
+      <div class="kicker">AI-Powered</div>
+      <div class="title">Financial Document<br>Similarity Finder</div>
+      <div class="subtitle">How an on-premise system ingests, understands,<br>and matches financial documents</div>
+    </div>
+    <!-- network + servers + shield art -->
+    <svg class="hart" viewBox="0 0 330 184">
+      <g stroke="#3f74a8" stroke-width="1" opacity=".55">
+        <line x1="20" y1="30" x2="80" y2="60"/><line x1="80" y1="60" x2="150" y2="28"/>
+        <line x1="150" y1="28" x2="210" y2="70"/><line x1="80" y1="60" x2="120" y2="110"/>
+        <line x1="120" y1="110" x2="40" y2="120"/><line x1="210" y1="70" x2="250" y2="40"/>
+        <line x1="120" y1="110" x2="180" y2="130"/><line x1="20" y1="30" x2="40" y2="120"/>
+      </g>
+      <g fill="#5fa8e6">
+        <circle cx="20" cy="30" r="3.5"/><circle cx="80" cy="60" r="4.5"/><circle cx="150" cy="28" r="3.5"/>
+        <circle cx="210" cy="70" r="4"/><circle cx="120" cy="110" r="5"/><circle cx="40" cy="120" r="3"/>
+        <circle cx="250" cy="40" r="3.5"/><circle cx="180" cy="130" r="3"/>
+      </g>
+      <!-- server stack -->
+      <g>
+        <rect x="206" y="96" width="86" height="22" rx="4" fill="#16365c" stroke="#3f74a8"/>
+        <rect x="206" y="122" width="86" height="22" rx="4" fill="#16365c" stroke="#3f74a8"/>
+        <rect x="206" y="148" width="86" height="22" rx="4" fill="#16365c" stroke="#3f74a8"/>
+        <circle cx="216" cy="107" r="2.5" fill="#5fd0c0"/><circle cx="216" cy="133" r="2.5" fill="#5fd0c0"/><circle cx="216" cy="159" r="2.5" fill="#5fd0c0"/>
+        <line x1="226" y1="107" x2="282" y2="107" stroke="#3f74a8" stroke-width="2"/>
+        <line x1="226" y1="133" x2="282" y2="133" stroke="#3f74a8" stroke-width="2"/>
+        <line x1="226" y1="159" x2="282" y2="159" stroke="#3f74a8" stroke-width="2"/>
+      </g>
+      <!-- shield lock -->
+      <g transform="translate(286,118)">
+        <path d="M22 2 L42 10 V30 C42 46 32 54 22 58 C12 54 2 46 2 30 V10 Z" fill="#e0a13c"/>
+        <path d="M22 8 L37 14 V30 C37 42 30 48 22 51 C14 48 7 42 7 30 V14 Z" fill="#caa24e" opacity=".5"/>
+        <rect x="15" y="27" width="14" height="12" rx="2" fill="#0a1d33"/>
+        <path d="M17 27 v-4 a5 5 0 0 1 10 0 v4" fill="none" stroke="#0a1d33" stroke-width="2.4"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="body">
+
+    <!-- ===================== ROW 1 : (1+3) | (2+4) ===================== -->
+    <div class="row">
+      <!-- LEFT COLUMN -->
+      <div class="col" style="width:332px;margin-right:20px;">
+
+        <!-- SECTION 1 -->
+        <div class="panel pad" style="margin-bottom:20px;">
+          <div class="sechead"><span class="snum">1</span><span class="stitle">What it does</span></div>
+          <div class="li">
+            <span class="chip"><svg class="ic" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg></span>
+            <span class="txt">Indexes invoices, receipts, statements, and purchase orders</span>
+          </div>
+          <div class="li">
+            <span class="chip"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="9" r="2"/><circle cx="9" cy="18" r="2"/><path d="M8 7l8 1M8 8l1 8M11 18l6-8"/></svg></span>
+            <span class="txt">Uses semantic embeddings to find similar or near-duplicate documents</span>
+          </div>
+          <div class="li" style="margin-bottom:0;">
+            <span class="chip"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>
+            <span class="txt">Helps finance teams detect duplicate invoices, fraud risk, and related records</span>
+          </div>
+        </div>
+
+        <!-- SECTION 3 -->
+        <div class="panel pad">
+          <div class="sechead"><span class="snum">3</span><span class="stitle">Upload flow</span></div>
+          <div class="ufrow"><span class="ufnum">1</span><span class="ufic"><svg class="ic" viewBox="0 0 24 24"><path d="M12 16V6"/><path d="M8 10l4-4 4 4"/><path d="M5 18h14"/></svg></span><span class="uftx">User uploads a file</span></div>
+          <div class="ufrow"><span class="ufnum">2</span><span class="ufic"><svg class="ic" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 13h5M10 16h5"/></svg></span><span class="uftx">Text is extracted from PDF, DOCX, TXT, PNG, or JPG</span></div>
+          <div class="ufrow"><span class="ufnum">3</span><span class="ufic"><svg class="ic" viewBox="0 0 24 24"><path d="M4 8V5h3M20 8V5h-3M4 16v3h3M20 16v3h-3"/><path d="M8 12h8" stroke-width="2"/><path d="M9 9v6M15 9v6"/></svg></span><span class="uftx">OCR runs if the document is scanned</span></div>
+          <div class="ufrow"><span class="ufnum">4</span><span class="ufic"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 6h10M8 18h10"/><path d="M18 6v12"/></svg></span><span class="uftx">Text is split into ~800-character chunks</span></div>
+          <div class="ufrow"><span class="ufnum">5</span><span class="ufic"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="16" r="2"/><circle cx="19" cy="16" r="2"/><path d="M11 6l-5 9M13 6l5 9M7 16h10"/></svg></span><span class="uftx">Each chunk becomes a 384-dimensional embedding</span></div>
+          <div class="ufrow"><span class="ufnum">6</span><span class="ufic"><svg class="ic" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3 3 7 3s7-1.3 7-3v-6"/></svg></span><span class="uftx">Vectors are stored in Qdrant and metadata in PostgreSQL</span></div>
+          <div class="badge"><svg class="ic" viewBox="0 0 24 24" style="stroke:#1f6b64;"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4"/></svg>Max file size: 50 MB</div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN -->
+      <div class="col" style="width:658px;">
+
+        <!-- SECTION 2 -->
+        <div class="panel pad" style="margin-bottom:20px;">
+          <div class="sechead"><span class="snum">2</span><span class="stitle">System architecture</span></div>
+          <div class="archbox">
+            <svg class="wires" width="610" height="360" viewBox="0 0 610 360">
+              <g stroke="#2f6fb0" stroke-width="2" fill="none">
+                <line x1="120" y1="100" x2="162" y2="100"/>
+                <line x1="420" y1="100" x2="462" y2="100"/>
+                <polyline points="232,222 200,244 200,252"/>
+                <polyline points="539,175 539,244 457,244 457,252"/>
+                <line x1="312" y1="300" x2="344" y2="300"/>
+              </g>
+              <g fill="#2f6fb0">
+                <polygon points="162,100 154,96 154,104"/>
+                <polygon points="462,100 454,96 454,104"/>
+                <polygon points="200,256 196,248 204,248"/>
+                <polygon points="457,256 453,248 461,248"/>
+                <polygon points="312,300 304,296 304,304"/>
+                <polygon points="344,300 352,296 352,304"/>
+              </g>
+            </svg>
+
+            <!-- React -->
+            <div class="abx" style="left:0;top:50px;width:120px;height:104px;background:#eef4fb;border:1px solid #cfe0f2;padding-top:14px;">
+              <svg viewBox="0 0 24 24" width="30" height="30" style="margin:0 auto;display:block;"><g fill="none" stroke="#3a86c8" stroke-width="1.4"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></g><circle cx="12" cy="12" r="2" fill="#3a86c8"/></svg>
+              <div class="lab" style="margin-top:6px;">React<br>Frontend</div>
+              <div class="port">(:3000)</div>
+            </div>
+
+            <!-- Spring Boot -->
+            <div class="abx" style="left:168px;top:18px;width:252px;height:204px;background:#eef7ef;border:1px solid #cfe6cf;padding:12px 10px 0;">
+              <svg viewBox="0 0 24 24" width="26" height="26" style="display:inline-block;vertical-align:middle;"><path d="M21 4c-3 5-9 3-13 6-3 2-4 6-2 9" fill="none" stroke="#3a9e4a" stroke-width="1.6"/><circle cx="18" cy="6" r="1.6" fill="#3a9e4a"/></svg>
+              <span class="lab" style="vertical-align:middle;">Spring Boot Backend</span>
+              <div class="port">(:8080)</div>
+              <div style="background:#fff;border:1px solid #d8e6d8;border-radius:9px;margin-top:10px;padding:9px 8px;">
+                <div style="font-size:11px;font-weight:600;color:#5b6675;margin-bottom:8px;">Parsing / OCR</div>
+                <div style="text-align:center;">
+                  <div style="display:inline-block;width:70px;text-align:center;">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 3h8l4 4v14H7z" fill="#fbe9e7" stroke="#d05a4e" stroke-width="1.3"/><text x="11" y="19" font-size="6" fill="#d05a4e" font-family="Mono" font-weight="700">PDF</text></svg>
+                    <div style="font-size:10px;color:#5b6675;margin-top:2px;">PDF<br>parser</div>
+                  </div>
+                  <div style="display:inline-block;width:70px;text-align:center;">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 3h8l4 4v14H7z" fill="#e8f0fb" stroke="#3a86c8" stroke-width="1.3"/><text x="10" y="19" font-size="5.5" fill="#3a86c8" font-family="Mono" font-weight="700">DOC</text></svg>
+                    <div style="font-size:10px;color:#5b6675;margin-top:2px;">DOCX<br>parser</div>
+                  </div>
+                  <div style="display:inline-block;width:70px;text-align:center;">
+                    <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="#5b6675" stroke-width="1.3"/><text x="8" y="15" font-size="8" fill="#5b6675" font-family="Mono" font-weight="700">T</text></svg>
+                    <div style="font-size:10px;color:#5b6675;margin-top:2px;">Tesseract<br>OCR</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Python -->
+            <div class="abx" style="left:468px;top:50px;width:142px;height:122px;background:#fdf6e8;border:1px solid #f0e0bb;padding-top:14px;">
+              <svg viewBox="0 0 24 24" width="30" height="30" style="margin:0 auto;display:block;"><path d="M12 3c-3 0-5 1-5 3v3h6v1H6c-2 0-3 1-3 4s1 4 3 4h2v-3c0-2 1-3 3-3h4c2 0 3-1 3-3V6c0-2-2-3-6-3z" fill="#3a6ea5"/><path d="M12 21c3 0 5-1 5-3v-3h-6v-1h6c2 0 3-1 3-4" fill="#e0a13c" opacity=".9"/><circle cx="10" cy="6" r="1" fill="#fff"/></svg>
+              <div class="lab" style="margin-top:6px;">Python<br>Embedding<br>Service</div>
+              <div class="port">(:5000)</div>
+            </div>
+
+            <!-- Postgres -->
+            <div class="abx" style="left:92px;top:255px;width:214px;height:84px;background:#eef3fb;border:1px solid #cfddf0;padding-top:16px;">
+              <svg viewBox="0 0 24 24" width="26" height="26" style="display:inline-block;vertical-align:middle;margin-right:6px;"><ellipse cx="12" cy="11" rx="8" ry="6" fill="#cfe0f2" stroke="#33679e" stroke-width="1.2"/><circle cx="9" cy="10" r="1.4" fill="#33679e"/><circle cx="15" cy="10" r="1.4" fill="#33679e"/><path d="M9 15c2 1 4 1 6 0" fill="none" stroke="#33679e" stroke-width="1.2"/></svg>
+              <span style="display:inline-block;vertical-align:middle;text-align:left;"><span class="lab">PostgreSQL<br>+ pgvector</span><span class="port" style="display:block;">(:5432)</span></span>
+            </div>
+
+            <!-- Qdrant -->
+            <div class="abx" style="left:350px;top:255px;width:214px;height:84px;background:#f2edf8;border:1px solid #ddd0ec;padding-top:16px;">
+              <svg viewBox="0 0 24 24" width="26" height="26" style="display:inline-block;vertical-align:middle;margin-right:6px;"><polygon points="12,3 20,7.5 20,16.5 12,21 4,16.5 4,7.5" fill="#7c3aed" opacity=".85"/><circle cx="12" cy="12" r="3" fill="#fff"/></svg>
+              <span style="display:inline-block;vertical-align:middle;text-align:left;"><span class="lab">Qdrant<br>Vector DB</span><span class="port" style="display:block;">(:6333)</span></span>
+            </div>
+          </div>
+          <div class="arrowcap">Microservices-lite, fully on-premise via Docker Compose</div>
+        </div>
+
+        <!-- SECTION 4 -->
+        <div class="panel pad">
+          <div class="sechead"><span class="snum">4</span><span class="stitle">Search flow</span></div>
+          <div style="text-align:center;white-space:nowrap;">
+            <div class="sfcell"><div class="sfcirc"><svg class="icw" viewBox="0 0 24 24"><path d="M12 16V6"/><path d="M8 10l4-4 4 4"/><path d="M5 18h14"/></svg></div><div class="sflab">Upload query document</div></div>
+            <div class="sfarrow"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#2f6fb0" stroke-width="2"/></svg></div>
+            <div class="sfcell"><div class="sfcirc"><svg class="icw" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 13h5M10 16h5"/></svg></div><div class="sflab">Extract + chunk text</div></div>
+            <div class="sfarrow"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#2f6fb0" stroke-width="2"/></svg></div>
+            <div class="sfcell"><div class="sfcirc"><svg class="icw" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="16" r="2"/><circle cx="19" cy="16" r="2"/><path d="M11 6l-5 9M13 6l5 9M7 16h10"/></svg></div><div class="sflab">Generate embeddings</div></div>
+            <div class="sfarrow"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#2f6fb0" stroke-width="2"/></svg></div>
+            <div class="sfcell"><div class="sfcirc"><svg class="icw" viewBox="0 0 24 24"><polygon points="12,4 18,7.5 18,14.5 12,18 6,14.5 6,7.5"/><circle cx="12" cy="11" r="2.4"/></svg></div><div class="sflab">Search top matches in Qdrant</div></div>
+            <div class="sfarrow"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="#2f6fb0" stroke-width="2"/></svg></div>
+            <div class="sfcell"><div class="sfcirc"><svg class="icw" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 14l2 2 4-4"/></svg></div><div class="sflab">Merge by document, score results, and flag duplicates</div></div>
+          </div>
+
+          <div style="text-align:center;"><span class="thr"><svg viewBox="0 0 24 24" style="stroke:#a06a14;fill:none;stroke-width:1.8;"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Default threshold: 0.6</span></div>
+
+          <div class="row">
+            <div class="col" style="width:248px;margin-right:20px;">
+              <div class="guide">Match score guide</div>
+              <div class="grow"><span class="gband" style="background:#2e9e6f;">&gt;= 0.85</span><span class="glab">Strong Match</span></div>
+              <div class="grow"><span class="gband" style="background:#2f6fb0;">0.70&ndash;0.84</span><span class="glab">Related</span></div>
+              <div class="grow" style="margin-bottom:0;"><span class="gband" style="background:#e0a13c;">0.60&ndash;0.69</span><span class="glab">Weak Match</span></div>
+            </div>
+            <div class="col" style="width:348px;">
+              <div style="text-align:center;font-size:11px;color:#5b6675;font-weight:600;margin-bottom:4px;">Top matches (example)</div>
+              <table class="tbl">
+                <tr><th>Rank</th><th>Document</th><th colspan="2">Score</th></tr>
+                <tr><td><span class="rkn" style="background:#2e9e6f;">1</span></td><td class="path" style="font-size:11.5px;">INV-2025-00421.pdf</td><td style="width:34px;">0.92</td><td><span class="sbar" style="width:84px;background:#2e9e6f;"></span></td></tr>
+                <tr><td><span class="rkn" style="background:#2f6fb0;">2</span></td><td class="path" style="font-size:11.5px;">INV-2025-00387.pdf</td><td>0.78</td><td><span class="sbar" style="width:64px;background:#2f6fb0;"></span></td></tr>
+                <tr><td><span class="rkn" style="background:#e0a13c;">3</span></td><td class="path" style="font-size:11.5px;">INV-2025-00211.pdf</td><td>0.64</td><td><span class="sbar" style="width:48px;background:#e0a13c;"></span></td></tr>
+                <tr><td style="color:#aeb7c2;">&hellip;</td><td style="color:#aeb7c2;">&hellip;</td><td style="color:#aeb7c2;">&hellip;</td><td></td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===================== ROW 2 : 5 | 6 ===================== -->
+    <div class="row" style="margin-top:20px;">
+      <div class="col panel pad" style="width:495px;margin-right:20px;">
+        <div class="sechead"><span class="snum">5</span><span class="stitle">Core tech stack</span></div>
+        <div class="row">
+          <div class="col" style="width:232px;margin-right:14px;">
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#3a86c8;"><circle cx="12" cy="12" r="2"/><g fill="none"><ellipse cx="12" cy="12" rx="10" ry="4"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/></g></svg></span><span class="nm">Frontend</span><span class="vl">React 18</span></div>
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#3a9e4a;"><path d="M20 5c-3 4-8 2-12 5-3 2-3 6-1 8"/><circle cx="17" cy="6" r="1.4" fill="#3a9e4a"/></svg></span><span class="nm">Backend</span><span class="vl">Spring Boot 3 / Java 21</span></div>
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#7c3aed;"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="17" r="2"/><circle cx="19" cy="17" r="2"/><path d="M11 6l-5 9M13 6l5 9M7 17h10"/></svg></span><span class="nm">Embeddings</span><span class="vl" style="font-size:11.5px;">Sentence Transformers<br>(all-MiniLM-L6-v2)</span></div>
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#7c3aed;"><polygon points="12,4 19,8 19,16 12,20 5,16 5,8"/><circle cx="12" cy="12" r="2.4"/></svg></span><span class="nm">Vector DB</span><span class="vl">Qdrant</span></div>
+            <div class="trow" style="margin-bottom:0;"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#33679e;"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3 3 7 3s7-1.3 7-3V6"/></svg></span><span class="nm">Metadata DB</span><span class="vl">PostgreSQL + pgvector</span></div>
+          </div>
+          <div class="col" style="width:205px;">
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#5b6675;"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9v6M17 9v6M9 12h6"/></svg></span><span class="nm">OCR</span><span class="vl">Tesseract</span></div>
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#d05a4e;"><path d="M7 3h8l4 4v14H7z"/><path d="M14 3v4h4"/></svg></span><span class="nm">PDF</span><span class="vl">Apache PDFBox</span></div>
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#3a86c8;"><path d="M7 3h8l4 4v14H7z"/><path d="M14 3v4h4"/></svg></span><span class="nm">DOCX</span><span class="vl">Apache POI</span></div>
+            <div class="trow"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#e0a13c;"><path d="M4 20V4"/><path d="M4 20h16"/><rect x="7" y="12" width="3" height="5"/><rect x="12" y="8" width="3" height="9"/><rect x="17" y="5" width="3" height="12"/></svg></span><span class="nm">Monitoring</span><span class="vl">Prometheus + Grafana</span></div>
+            <div class="trow" style="margin-bottom:0;"><span class="ci"><svg class="ic" viewBox="0 0 24 24" style="stroke:#2a8a86;"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9a2 2 0 0 1 4 0v2"/></svg></span><span class="nm">Security</span><span class="vl">Spring Security + JWT</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col panel pad" style="width:495px;">
+        <div class="sechead"><span class="snum">6</span><span class="stitle">Security &amp; governance</span></div>
+        <div class="row">
+          <div class="col" style="width:222px;margin-right:12px;">
+            <div class="srow"><span class="ci"><svg class="icn" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/><rect x="14" y="13" width="6" height="5" rx="1" fill="#173a5e" stroke="none"/></svg></span><span class="tx">JWT-based authentication with role-based access</span></div>
+            <div class="srow"><span class="ci"><svg class="icn" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span class="tx">AES-256 for sensitive fields and TLS in transit</span></div>
+            <div class="srow" style="margin-bottom:0;"><span class="ci"><svg class="icn" viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M6 7l1 13h10l1-13"/><path d="M10 11v5M14 11v5"/></svg></span><span class="tx">GDPR-friendly deletion: remove both metadata and vectors</span></div>
+          </div>
+          <div class="col" style="width:222px;">
+            <div class="srow"><span class="ci"><svg class="icn" viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c0-3 2.5-5 5-5s5 2 5 5M14 19c0-2 1.5-3.5 3-3.5s3 1.5 3 3.5"/></svg></span><span class="tx">Roles: Clerk, Finance Manager, Admin</span></div>
+            <div class="srow"><span class="ci"><svg class="icn" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-3M12 5V3M5 6l-1-1"/></svg></span><span class="tx">Rate limits on login, upload, and search</span></div>
+            <div class="srow" style="margin-bottom:0;"><span class="ci"><svg class="icn" viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4M10 16h2"/><path d="M16 4l2 2-2 2"/></svg></span><span class="tx">Append-only audit logs</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== ROW 3 : 7 | 8 ===================== -->
+    <div class="row" style="margin-top:20px;">
+      <div class="col panel pad" style="width:470px;margin-right:20px;">
+        <div class="sechead"><span class="snum">7</span><span class="stitle">Performance targets</span></div>
+        <div style="text-align:center;white-space:nowrap;margin-top:6px;">
+          <div class="pcell"><div class="pic"><svg class="icn" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M14 3v4h4"/></svg></div><div class="plab">Upload<br>(digital PDF)</div><div class="pval">&lt; 3 s</div><div class="psub">P95</div></div>
+          <div class="pcell"><div class="pic"><svg class="icn" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><path d="M8 10v4M16 10v4M10 12h4"/></svg></div><div class="plab">Upload<br>with OCR</div><div class="pval">&lt; 10 s</div><div class="psub">P95</div></div>
+          <div class="pcell"><div class="pic"><svg class="icn" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div><div class="plab">Similarity<br>search</div><div class="pval">&lt; 500 ms</div><div class="psub">P95</div></div>
+          <div class="pcell"><div class="pic"><svg class="icn" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><div class="plab">Availability<br>target</div><div class="pval">99.5%</div><div class="psub">&nbsp;</div></div>
+          <div class="pcell"><div class="pic"><svg class="icn" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7" y="13" width="3" height="4"/><rect x="12" y="9" width="3" height="8"/><rect x="17" y="5" width="3" height="12"/></svg></div><div class="plab">Scale up to</div><div class="pval">500,000</div><div class="psub">vectors</div></div>
+        </div>
+      </div>
+
+      <div class="col panel pad" style="width:520px;">
+        <div class="sechead"><span class="snum">8</span><span class="stitle">Key APIs</span></div>
+        <table class="atbl">
+          <tr><td style="width:70px;"><span class="mth" style="background:#2e9e6f;">POST</span></td><td style="width:150px;"><span class="path">/auth/login</span></td><td class="adesc">Authenticate user and receive JWT</td><td style="width:24px;"><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="8" r="3.2"/><path d="M6 20c0-3 2.7-5 6-5s6 2 6 5"/></svg></td></tr>
+          <tr><td><span class="mth" style="background:#2e9e6f;">POST</span></td><td><span class="path">/documents/upload</span></td><td class="adesc">Upload and index a document</td><td><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><path d="M12 16V6M8 10l4-4 4 4M5 18h14"/></svg></td></tr>
+          <tr><td><span class="mth" style="background:#2e9e6f;">POST</span></td><td><span class="path">/documents/search</span></td><td class="adesc">Search similar documents</td><td><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></td></tr>
+          <tr><td><span class="mth" style="background:#2f6fb0;">GET</span></td><td><span class="path">/documents</span></td><td class="adesc">List documents with metadata</td><td><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg></td></tr>
+          <tr><td><span class="mth" style="background:#c0413b;">DELETE</span></td><td><span class="path">/documents/{id}</span></td><td class="adesc">Delete a document and its vectors</td><td><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><path d="M5 7h14M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></td></tr>
+          <tr><td><span class="mth" style="background:#2f6fb0;">GET</span></td><td><span class="path">/alerts</span></td><td class="adesc">List alerts and flagged items</td><td><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M10.5 21a2 2 0 0 0 3 0"/></svg></td></tr>
+          <tr><td style="border-bottom:none;"><span class="mth" style="background:#2f6fb0;">GET</span></td><td style="border-bottom:none;"><span class="path">/audit</span></td><td class="adesc" style="border-bottom:none;">View audit log entries</td><td style="border-bottom:none;"><svg class="icn" viewBox="0 0 24 24" width="18" height="18"><path d="M7 3h10v18H7z"/><path d="M10 8h4M10 12h4M10 16h2"/></svg></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===================== ROW 4 : 9 ===================== -->
+    <div class="why" style="margin-top:20px;">
+      <svg class="wart" viewBox="0 0 190 120">
+        <rect x="30" y="20" width="70" height="86" rx="5" fill="#16365c" stroke="#3f74a8"/>
+        <rect x="44" y="14" width="70" height="86" rx="5" fill="#1d4775" stroke="#4a7fb0"/>
+        <line x1="56" y1="34" x2="100" y2="34" stroke="#7fa3c8" stroke-width="3" stroke-linecap="round"/>
+        <line x1="56" y1="46" x2="100" y2="46" stroke="#7fa3c8" stroke-width="3" stroke-linecap="round"/>
+        <line x1="56" y1="58" x2="86" y2="58" stroke="#7fa3c8" stroke-width="3" stroke-linecap="round"/>
+        <rect x="70" y="66" width="6" height="16" fill="#5fd0c0"/><rect x="80" y="60" width="6" height="22" fill="#e0a13c"/>
+        <circle cx="128" cy="78" r="24" fill="rgba(95,208,192,.12)" stroke="#e0a13c" stroke-width="6"/>
+        <path d="M118 78l7 7 12-13" fill="none" stroke="#5fd0c0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="146" y1="96" x2="162" y2="112" stroke="#e0a13c" stroke-width="7" stroke-linecap="round"/>
+      </svg>
+      <div style="margin-bottom:14px;"><span class="snum" style="background:rgba(255,255,255,.12);">9</span><span class="stitle" style="color:#fff;">Why it matters</span></div>
+      <div>
+        <div class="wcell" style="width:230px;margin-right:24px;"><span class="wic"><svg class="icw" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="wtx">Reduces manual review time</span></div>
+        <div class="wcell" style="width:240px;margin-right:24px;"><span class="wic"><svg class="icw" viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"/><path d="M14 3v4h4"/><path d="M10 14l2 2 4-4"/></svg></span><span class="wtx">Improves duplicate invoice detection</span></div>
+        <div class="wcell" style="width:230px;"><span class="wic"><svg class="icw" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span><span class="wtx">Adds traceability with alerts and audit logs</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer"><span class="dots">&middot; &middot; &middot; &middot;</span> &nbsp; Source: Technical Requirements Document v1.0 &mdash; 30 May 2026 &nbsp; <span class="dots">&middot; &middot; &middot; &middot;</span></div>
+
+</div>
+</body></html>

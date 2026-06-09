@@ -15,6 +15,9 @@ public class ChunkingService {
     @Value("${chunk.max-per-doc:50}")
     private int maxChunks;
 
+    @Value("${chunk.overlap:100}")
+    private int overlap;
+
     public List<String> chunkText(String text) {
         List<String> chunks = new ArrayList<>();
         if (text == null || text.isBlank()) {
@@ -22,9 +25,13 @@ public class ChunkingService {
         }
 
         int length = text.length();
-        for (int i = 0; i < length && chunks.size() < maxChunks; i += chunkSize) {
+        int step = Math.max(1, chunkSize - Math.max(0, overlap));
+        for (int i = 0; i < length && chunks.size() < maxChunks; i += step) {
             int end = Math.min(length, i + chunkSize);
             chunks.add(text.substring(i, end));
+            if (end == length) {
+                break;
+            }
         }
 
         return chunks;

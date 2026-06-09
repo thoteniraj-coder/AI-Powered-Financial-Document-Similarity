@@ -6,8 +6,8 @@ import { Button } from '../components/common/Button';
 import './Login.css';
 
 export function Login() {
-  const [email, setEmail] = useState('admin@findoc.ai');
-  const [password, setPassword] = useState('admin');
+  const [email, setEmail] = useState('admin@finco.internal');
+  const [password, setPassword] = useState('Admin@2026');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);

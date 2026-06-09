@@ -40,12 +40,14 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/health", "/api/auth/**").permitAll()
-                .requestMatchers("/api/users/**").hasAuthority("admin")
-                .requestMatchers("/api/audit/**").hasAnyAuthority("admin", "auditor")
-                .requestMatchers("/api/alerts/**").hasAnyAuthority("admin", "finance_manager")
-                .requestMatchers(HttpMethod.DELETE, "/api/documents/**").hasAnyAuthority("admin", "finance_manager")
-                .requestMatchers(HttpMethod.POST, "/api/documents/upload", "/api/documents/search", "/api/documents/compare").hasAnyAuthority("admin", "finance_manager", "finance_clerk")
-                .requestMatchers(HttpMethod.GET, "/api/documents/**").hasAnyAuthority("admin", "finance_manager", "finance_clerk", "auditor", "viewer")
+                .requestMatchers("/api/users/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_FINANCE_MANAGER", "ROLE_COMPLIANCE_OFFICER")
+                .requestMatchers("/api/retention-policies/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_COMPLIANCE_OFFICER")
+                .requestMatchers("/api/audit/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_AUDITOR", "ROLE_COMPLIANCE_OFFICER")
+                .requestMatchers("/api/alerts/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_FINANCE_MANAGER", "ROLE_COMPLIANCE_OFFICER")
+                .requestMatchers(HttpMethod.DELETE, "/api/documents/*/erase").hasAnyAuthority("ROLE_ADMIN", "ROLE_COMPLIANCE_OFFICER")
+                .requestMatchers(HttpMethod.DELETE, "/api/documents/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_FINANCE_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/documents/upload", "/api/documents/search", "/api/documents/compare", "/api/documents/*/find-similar").hasAnyAuthority("ROLE_ADMIN", "ROLE_FINANCE_MANAGER", "ROLE_FINANCE_CLERK")
+                .requestMatchers(HttpMethod.GET, "/api/documents/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_FINANCE_MANAGER", "ROLE_FINANCE_CLERK", "ROLE_AUDITOR", "ROLE_VIEWER", "ROLE_COMPLIANCE_OFFICER")
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
@@ -75,9 +77,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setExposedHeaders(List.of("Content-Disposition", "Content-Type"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

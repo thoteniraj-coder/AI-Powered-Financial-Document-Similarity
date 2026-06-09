@@ -4,6 +4,7 @@ import com.fintech.simdocfinder.model.entity.Alert;
 import com.fintech.simdocfinder.model.entity.Document;
 import com.fintech.simdocfinder.model.entity.DocumentMetadata;
 import com.fintech.simdocfinder.repository.AlertRepository;
+import com.fintech.simdocfinder.repository.DocumentRepository;
 import com.fintech.simdocfinder.vector.QdrantService;
 import io.qdrant.client.grpc.Points.Filter;
 import io.qdrant.client.grpc.Points.ScoredPoint;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static io.qdrant.client.ConditionFactory.matchKeyword;
@@ -24,6 +26,7 @@ public class DuplicateDetectionService {
 
     private final QdrantService qdrantService;
     private final AlertRepository alertRepository;
+    private final DocumentRepository documentRepository;
 
     public void checkForDuplicates(Document newDoc, String firstChunk, float[] chunkEmbedding, DocumentMetadata metadata) {
         try {
@@ -56,10 +59,13 @@ public class DuplicateDetectionService {
                 .alertType(type)
                 .severity(severity)
                 .description(desc)
-                .status("NEW")
+                .status("open")
+                .documents(Set.of(
+                        documentRepository.getReferenceById(doc1),
+                        documentRepository.getReferenceById(doc2)
+                ))
                 .createdAt(LocalDateTime.now())
                 .build();
         alertRepository.save(alert);
-        // Note: Missing mapping for Alert <-> Document in Alert class (alert_documents), so skipping link for now
     }
 }

@@ -1,0 +1,195 @@
+<h2 class="sr-only">Document comparison page showing source and target documents side by side with similarity scoring</h2>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+.page{display:flex;min-height:700px;background:var(--color-background-tertiary);font-family:var(--font-sans);}
+.sidebar{width:200px;background:#0f172a;display:flex;flex-direction:column;padding:16px 0;flex-shrink:0;}
+.brand{padding:0 16px 16px;border-bottom:0.5px solid rgba(255,255,255,0.08);margin-bottom:8px;}
+.brand-name{font-size:14px;font-weight:500;color:#fff;}
+.brand-sub{font-size:11px;color:rgba(255,255,255,0.4);}
+.nav-link{display:flex;align-items:center;gap:8px;padding:7px 16px;font-size:13px;color:rgba(255,255,255,0.55);cursor:pointer;border-left:2px solid transparent;}
+.nav-link:hover{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.85);}
+.nav-link.active{color:#fff;background:rgba(26,86,219,0.2);border-left-color:#1a56db;}
+.nav-link i{font-size:15px;}
+.user-row{margin-top:auto;padding:12px 16px;border-top:0.5px solid rgba(255,255,255,0.08);display:flex;align-items:center;gap:8px;}
+.uavatar{width:28px;height:28px;border-radius:50%;background:#1a56db;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#fff;flex-shrink:0;}
+.uname{font-size:12px;color:rgba(255,255,255,0.7);}
+.urole{font-size:10px;color:rgba(255,255,255,0.35);}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0;}
+.topbar{background:var(--color-background-primary);border-bottom:0.5px solid var(--color-border-tertiary);padding:0 20px;height:50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-title{font-size:14px;font-weight:500;color:var(--color-text-primary);}
+.search-box{display:flex;align-items:center;gap:6px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:5px 10px;width:180px;}
+.search-box i{font-size:13px;color:var(--color-text-secondary);}
+.search-box span{font-size:12px;color:var(--color-text-secondary);}
+.topbar-right{display:flex;align-items:center;gap:6px;}
+.icon-btn{width:30px;height:30px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;color:var(--color-text-secondary);cursor:pointer;position:relative;}
+.icon-btn:hover{background:var(--color-background-secondary);}
+.icon-btn i{font-size:15px;}
+.notif-dot{position:absolute;top:5px;right:5px;width:7px;height:7px;background:#ef4444;border-radius:50%;border:1.5px solid var(--color-background-primary);}
+.tavatar{width:26px;height:26px;border-radius:50%;background:#1a56db;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff;}
+
+.content{flex:1;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.back-btn{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;width:fit-content;}
+.back-btn:hover{color:var(--color-text-primary);}
+.back-btn i{font-size:14px;}
+
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}
+.page-hdr-left{}
+.page-hdr-title{font-size:18px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px;}
+.page-hdr-sub{font-size:12px;color:var(--color-text-secondary);}
+
+.score-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:14px 20px;display:flex;align-items:center;gap:16px;min-width:220px;}
+.big-score-ring{position:relative;width:56px;height:56px;flex-shrink:0;}
+.big-score-ring svg{transform:rotate(-90deg);}
+.big-score-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#B91C1C;}
+.score-info{}
+.score-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:3px;}
+.score-verdict{display:inline-flex;align-items:center;gap:4px;background:#FEE2E2;color:#B91C1C;font-size:11px;font-weight:500;padding:2px 8px;border-radius:9999px;}
+
+.action-bar{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:12px 16px;display:flex;align-items:center;gap:8px;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--border-radius-md);font-size:12px;font-weight:500;cursor:pointer;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);color:var(--color-text-primary);}
+.btn:hover{background:var(--color-background-secondary);}
+.btn i{font-size:14px;}
+.btn.primary{background:#1a56db;color:#fff;border-color:#1a56db;}
+.btn.primary:hover{background:#1648c0;}
+.btn.warning{color:#92400E;border-color:#FCD34D;background:#FFFBEB;}
+.btn.warning:hover{background:#FEF3C7;}
+.btn-sep{width:0.5px;height:24px;background:var(--color-border-tertiary);margin:0 4px;}
+
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;flex:1;}
+.doc-col{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);display:flex;flex-direction:column;overflow:hidden;}
+.doc-col.source{border-top:3px solid #1a56db;}
+.doc-col.target{border-top:3px solid #7c3aed;}
+.doc-col-hdr{padding:14px 16px;border-bottom:0.5px solid var(--color-border-tertiary);}
+.col-type{font-size:10px;font-weight:500;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;}
+.col-type.source{color:#1a56db;}
+.col-type.target{color:#7c3aed;}
+.col-name{font-size:13px;font-weight:500;color:var(--color-text-primary);word-break:break-all;line-height:1.3;}
+.col-sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px;}
+
+.section-hdr{padding:10px 16px 4px;font-size:10px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-top:0.5px solid var(--color-border-tertiary);}
+.meta-row{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:0.5px solid var(--color-border-tertiary);font-size:12px;}
+.meta-row:last-of-type{border-bottom:none;}
+.meta-k{color:var(--color-text-secondary);}
+.meta-v{font-weight:500;color:var(--color-text-primary);}
+.meta-v.match{color:#059669;}
+.meta-v.diff{color:#B91C1C;}
+.meta-v.empty{color:var(--color-text-secondary);font-weight:400;font-style:italic;}
+
+.text-box{margin:10px 16px 14px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;font-size:11px;line-height:1.7;color:var(--color-text-secondary);font-family:var(--font-mono);max-height:90px;overflow:auto;}
+.text-box .hi{background:#FEF3C7;color:#92400E;border-radius:2px;padding:0 2px;}
+
+.empty-target{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:30px 20px;text-align:center;gap:10px;}
+.empty-icon{width:44px;height:44px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg);display:flex;align-items:center;justify-content:center;}
+.empty-icon i{font-size:20px;color:var(--color-text-secondary);}
+.empty-title{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+.empty-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.5;}
+.doc-select{display:flex;align-items:center;justify-content:space-between;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:8px 12px;width:100%;font-size:12px;color:var(--color-text-secondary);cursor:pointer;margin-top:4px;}
+.doc-select i{color:var(--color-text-secondary);}
+
+.diff-legend{display:flex;gap:12px;align-items:center;margin-left:auto;}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary);}
+.legend-dot{width:8px;height:8px;border-radius:2px;}
+</style>
+
+<div class="page">
+  <div class="sidebar">
+    <div class="brand"><div class="brand-name">FinDoc AI</div><div class="brand-sub">Finance Operations</div></div>
+    <div class="nav-link"><i class="ti ti-layout-dashboard" aria-hidden="true"></i> Dashboard</div>
+    <div class="nav-link"><i class="ti ti-upload" aria-hidden="true"></i> Upload</div>
+    <div class="nav-link"><i class="ti ti-search" aria-hidden="true"></i> Search</div>
+    <div class="nav-link active"><i class="ti ti-files" aria-hidden="true"></i> Documents</div>
+    <div class="nav-link"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Alerts</div>
+    <div class="nav-link"><i class="ti ti-clipboard-list" aria-hidden="true"></i> Audit Trail</div>
+    <div class="nav-link"><i class="ti ti-settings" aria-hidden="true"></i> Settings</div>
+    <div class="user-row">
+      <div class="uavatar">SY</div>
+      <div><div class="uname">System Admin</div><div class="urole">Admin</div></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title">Documents</div>
+      <div class="topbar-right">
+        <div class="search-box"><i class="ti ti-search" aria-hidden="true"></i><span>Search documents…</span></div>
+        <div class="icon-btn" aria-label="Notifications"><i class="ti ti-bell" aria-hidden="true"></i><div class="notif-dot"></div></div>
+        <div class="tavatar">SY</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="back-btn"><i class="ti ti-arrow-left" aria-hidden="true"></i> Back</div>
+
+      <div class="page-hdr">
+        <div class="page-hdr-left">
+          <div class="page-hdr-title">Document comparison</div>
+          <div class="page-hdr-sub">Compare two documents side by side to detect duplicates or discrepancies</div>
+        </div>
+        <div class="score-card">
+          <div class="big-score-ring">
+            <svg width="56" height="56" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#fee2e2" stroke-width="4"/>
+              <circle cx="28" cy="28" r="22" fill="none" stroke="#ef4444" stroke-width="4" stroke-dasharray="5 133" stroke-linecap="round"/>
+            </svg>
+            <div class="big-score-ring-label">0%</div>
+          </div>
+          <div class="score-info">
+            <div class="score-title">Metadata similarity</div>
+            <div style="margin-top:4px;"><span class="score-verdict"><i class="ti ti-file-unknown" style="font-size:11px;" aria-hidden="true"></i> No target selected</span></div>
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px;">Select a document to compare</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <div class="btn primary"><i class="ti ti-copy" aria-hidden="true"></i> Mark as duplicate</div>
+        <div class="btn warning"><i class="ti ti-flag" aria-hidden="true"></i> Flag for review</div>
+        <div class="btn-sep"></div>
+        <div class="btn"><i class="ti ti-files" aria-hidden="true"></i> Choose documents</div>
+        <div class="diff-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#059669;"></span> Match</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Difference</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);"></span> Not set</span>
+        </div>
+      </div>
+
+      <div class="compare-grid">
+        <div class="doc-col source">
+          <div class="doc-col-hdr">
+            <div class="col-type source">Source document</div>
+            <div class="col-name">wordpress-pdf-invoice-plugin-sample.pdf</div>
+            <div class="col-sub">Uploaded 01/06/2026 · admin@finco.internal</div>
+          </div>
+          <div class="section-hdr">Metadata</div>
+          <div class="meta-row"><span class="meta-k">Vendor</span><span class="meta-v">DEMO – Sliced Invoices</span></div>
+          <div class="meta-row"><span class="meta-k">Invoice number</span><span class="meta-v match">3337</span></div>
+          <div class="meta-row"><span class="meta-k">Date</span><span class="meta-v empty">Not set</span></div>
+          <div class="meta-row"><span class="meta-k">Amount</span><span class="meta-v">USD 1.00</span></div>
+          <div class="meta-row"><span class="meta-k">Type</span><span class="meta-v"><span style="background:#EBF3FF;color:#1E429F;font-size:10px;padding:2px 7px;border-radius:9999px;font-weight:500;">invoice</span></span></div>
+          <div class="section-hdr">Extracted text</div>
+          <div class="text-box">Invoice<br>Payment is due within <span class="hi">30 days</span> from date of invoice. Late payment is subject to fees of <span class="hi">5%</span> per month.</div>
+        </div>
+
+        <div class="doc-col target">
+          <div class="doc-col-hdr">
+            <div class="col-type target">Target document</div>
+            <div class="col-name" style="color:var(--color-text-secondary);font-weight:400;">No document selected</div>
+            <div class="col-sub">Choose a document from the list below</div>
+          </div>
+          <div class="empty-target">
+            <div class="empty-icon"><i class="ti ti-file-plus" aria-hidden="true"></i></div>
+            <div class="empty-title">Select a document to compare</div>
+            <div class="empty-desc">Choose any document from your library to compare against the source on the left</div>
+            <div class="doc-select">
+              <span>-- Choose document --</span>
+              <i class="ti ti-chevron-down" aria-hidden="true"></i>
+            </div>
+            <div style="font-size:11px;color:var(--color-text-secondary);">or</div>
+            <div class="btn"><i class="ti ti-search" aria-hidden="true"></i> Search similar documents</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

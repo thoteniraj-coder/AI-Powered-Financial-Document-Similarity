@@ -115,10 +115,16 @@
 }
 
 .recent-doc-item {
+  display: block;
+  width: 100%;
+  background: white;
   padding: var(--space-3);
   border: 1px solid var(--slate-200);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-2);
+  text-align: left;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
   transition: background-color var(--transition-fast);
 }
@@ -126,6 +132,42 @@
 .recent-doc-item:hover {
   background-color: var(--slate-50);
   border-color: var(--slate-300);
+}
+
+.recent-doc-item.selected {
+  background-color: var(--navy-50);
+  border-color: var(--navy-400);
+  box-shadow: 0 0 0 2px rgba(46, 72, 153, 0.15);
+}
+
+.recent-doc-item.selected:hover {
+  background-color: var(--navy-100);
+}
+
+.doc-select-name {
+  font-weight: 500;
+  color: var(--navy-900);
+}
+
+.doc-select-vendor {
+  display: block;
+  font-size: 12px;
+  color: var(--slate-500);
+  margin-top: 2px;
+}
+
+.doc-select-check {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy-600);
+}
+
+.recent-doc-item {
+  position: relative;
 }
 
 .settings-card {

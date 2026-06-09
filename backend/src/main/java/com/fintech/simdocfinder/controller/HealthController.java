@@ -1,6 +1,8 @@
 package com.fintech.simdocfinder.controller;
 
+import com.fintech.simdocfinder.embedding.EmbeddingClient;
 import com.fintech.simdocfinder.model.dto.HealthResponse;
+import com.fintech.simdocfinder.vector.QdrantService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +20,8 @@ import java.util.Map;
 public class HealthController {
 
     private final DataSource dataSource;
+    private final QdrantService qdrantService;
+    private final EmbeddingClient embeddingClient;
 
     @GetMapping
     public ResponseEntity<HealthResponse> healthCheck() {
@@ -37,11 +41,19 @@ public class HealthController {
             overallStatus = "DOWN";
         }
 
-        // Qdrant placeholder
-        components.put("qdrant", "UP");
+        if (qdrantService.healthCheck()) {
+            components.put("qdrant", "UP");
+        } else {
+            components.put("qdrant", "DOWN");
+            overallStatus = "DOWN";
+        }
 
-        // Embedding placeholder
-        components.put("embedding-service", "UP");
+        if (embeddingClient.healthCheck()) {
+            components.put("embedding-service", "UP");
+        } else {
+            components.put("embedding-service", "DOWN");
+            overallStatus = "DOWN";
+        }
 
         HealthResponse response = HealthResponse.builder()
                 .status(overallStatus)

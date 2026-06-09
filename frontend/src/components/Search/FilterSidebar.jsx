@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import { Button } from '../common/Button';
 import './FilterSidebar.css';
@@ -21,16 +21,22 @@ const FilterSection = ({ title, children, defaultOpen = true }) => {
   );
 };
 
+const DEFAULT_FILTERS = {
+  vendors: [],
+  docTypes: [],
+  dateFrom: '',
+  dateTo: '',
+  minAmount: '',
+  maxAmount: '',
+  currency: 'Any'
+};
+
 const FilterSidebar = ({ onApply, onClear, filters, activeCount = 0 }) => {
-  const [localFilters, setLocalFilters] = useState(filters || {
-    vendors: [],
-    docTypes: [],
-    dateFrom: '',
-    dateTo: '',
-    minAmount: '',
-    maxAmount: '',
-    currency: 'Any'
-  });
+  const [localFilters, setLocalFilters] = useState(filters || DEFAULT_FILTERS);
+
+  useEffect(() => {
+    setLocalFilters(filters || DEFAULT_FILTERS);
+  }, [filters]);
 
   const handleChange = (field, value) => {
     setLocalFilters(prev => ({ ...prev, [field]: value }));
@@ -55,8 +61,8 @@ const FilterSidebar = ({ onApply, onClear, filters, activeCount = 0 }) => {
           {activeCount > 0 && <span className="filter-count-badge">{activeCount}</span>}
         </div>
         <button className="clear-filters-btn" onClick={() => {
-          setLocalFilters({ vendors: [], docTypes: [], dateFrom: '', dateTo: '', minAmount: '', maxAmount: '', currency: 'Any' });
-          onClear();
+          setLocalFilters(DEFAULT_FILTERS);
+          onClear?.();
         }}>
           Clear All
         </button>
@@ -83,8 +89,8 @@ const FilterSidebar = ({ onApply, onClear, filters, activeCount = 0 }) => {
             type="text" 
             className="filter-input" 
             placeholder="Search vendors..." 
+            value={localFilters.vendors?.[0] || ''}
             onChange={(e) => {
-              // Mock multiselect behavior with text input for now
               handleChange('vendors', e.target.value ? [e.target.value] : []);
             }}
           />

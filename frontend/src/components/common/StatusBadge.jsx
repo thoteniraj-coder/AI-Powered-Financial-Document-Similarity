@@ -1,15 +1,18 @@
 import React from 'react';
 
 export function StatusBadge({ status }) {
+  const displayStatus = String(status || 'Pending').replace('_', ' ');
+  const normalizedStatus = displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1).toLowerCase();
   const config = {
     Indexed: { class: 'badge-success', dot: '#16A34A' },
+    Completed: { class: 'badge-success', dot: '#16A34A' },
     Processing: { class: 'badge-warning', dot: '#D97706', animate: true },
     Pending: { class: 'badge-pending', dot: '#6B7280' },
     Failed: { class: 'badge-danger', dot: '#DC2626' },
     Archived: { class: 'badge-pending', dot: '#6B7280' },
   };
 
-  const { class: badgeClass, dot, animate } = config[status] || config.Pending;
+  const { class: badgeClass, dot, animate } = config[normalizedStatus] || config.Pending;
 
   return (
     <span className={`badge ${badgeClass}`}>
@@ -23,7 +26,7 @@ export function StatusBadge({ status }) {
           animation: animate ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none'
         }}
       />
-      {status}
+      {normalizedStatus}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }

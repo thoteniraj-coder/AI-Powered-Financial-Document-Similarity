@@ -1,23 +1,166 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Eye, Columns } from 'lucide-react';
 
 import ScoreRing from '../components/Search/ScoreRing';
 import SimilarityBadge from '../components/Search/SimilarityBadge';
 import FilterSidebar from '../components/Search/FilterSidebar';
+import DocumentPreviewModal from '../components/Documents/DocumentPreviewModal';
 import { Button } from '../components/common/Button';
+import { downloadDocumentFile, findSimilar, searchSimilar, searchSimilarText } from '../api/documents';
 import './SearchResults.css';
 
-const MOCK_RESULTS = [
-  { id: '1', score: 0.98, filename: 'INV-2023-042_AcmeCorp.pdf', vendor: 'Acme Corp', amount: '$4,250.00', date: '2023-10-15', snippet: '...invoice total for <mark>software licensing fees</mark> comes to $4,250.00 payable within 30 days...', type: 'STRONG_MATCH' },
-  { id: '2', score: 0.85, filename: 'INV-2023-041_AcmeCorp.pdf', vendor: 'Acme Corp', amount: '$4,250.00', date: '2023-09-15', snippet: '...monthly invoice for <mark>software licensing</mark> and support services...', type: 'STRONG_MATCH' },
-  { id: '3', score: 0.76, filename: 'PO-78902_TechFlow.pdf', vendor: 'TechFlow', amount: '$3,800.00', date: '2023-10-01', snippet: '...purchase order for annual <mark>licensing fees</mark> and implementation...', type: 'RELATED' },
-  { id: '4', score: 0.62, filename: 'Contract_GlobalSystems.docx', vendor: 'Global Systems', amount: '-', date: '2022-11-20', snippet: '...standard <mark>software licensing</mark> agreement section 4.2 terms...', type: 'WEAK_MATCH' },
-];
+const EMPTY_FILTERS = {
+  vendors: [],
+  docTypes: [],
+  dateFrom: '',
+  dateTo: '',
+  minAmount: '',
+  maxAmount: '',
+  currency: 'Any'
+};
+
+const toApiFilters = (filters) => ({
+  vendor: filters.vendors?.[0] || '',
+  documentType: filters.docTypes?.[0] || '',
+  dateFrom: filters.dateFrom || '',
+  dateTo: filters.dateTo || '',
+  amountMin: filters.minAmount || '',
+  amountMax: filters.maxAmount || '',
+  currency: filters.currency === 'Any' ? '' : filters.currency,
+});
+
+const countActiveFilters = (filters) => [
+  filters.vendors?.length,
+  filters.docTypes?.length,
+  filters.dateFrom,
+  filters.dateTo,
+  filters.minAmount,
+  filters.maxAmount,
+  filters.currency !== 'Any' ? filters.currency : '',
+].filter(Boolean).length;
+
+const mapResult = (result) => ({
+  id: result.documentId,
+  score: result.similarityScore,
+  filename: result.filename,
+  vendor: result.vendor || '-',
+  amount: result.totalAmount,
+  currency: result.currency || '',
+  date: result.invoiceDate || '',
+  snippet: result.matchedSnippet || '',
+  type: result.matchCategory,
+  documentType: result.documentType || '',
+});
+
+const formatAmount = (result) => {
+  if (result.amount === undefined || result.amount === null || result.amount === '') return '-';
+  return `${result.currency || ''} ${Number(result.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}`.trim();
+};
+
+const resultMatchesFilters = (result, filters) => {
+  const vendor = filters.vendors?.[0]?.trim().toLowerCase();
+  const docTypes = filters.docTypes || [];
+  const amount = Number(result.amount);
+
+  if (vendor && !String(result.vendor || '').toLowerCase().includes(vendor)) return false;
+  if (docTypes.length > 0 && !docTypes.includes(result.documentType)) return false;
+  if (filters.dateFrom && (!result.date || result.date < filters.dateFrom)) return false;
+  if (filters.dateTo && (!result.date || result.date > filters.dateTo)) return false;
+  if (filters.minAmount && (Number.isNaN(amount) || amount < Number(filters.minAmount))) return false;
+  if (filters.maxAmount && (Number.isNaN(amount) || amount > Number(filters.maxAmount))) return false;
+  if (filters.currency !== 'Any' && result.currency !== filters.currency) return false;
+  return true;
+};
 
 const SearchResults = () => {
   const navigate = useNavigate();
-  const [results] = useState(MOCK_RESULTS);
+  const location = useLocation();
+  const searchResponse = location.state?.response;
+  const searchContext = location.state?.searchContext;
+  const queryName = location.state?.queryName || 'Uploaded query document';
+  const threshold = location.state?.threshold || 70;
+  const [results, setResults] = useState((searchResponse?.results || []).map(mapResult));
+  const [filters, setFilters] = useState(searchContext?.filters || EMPTY_FILTERS);
+  const [sortBy, setSortBy] = useState('similarity');
+  const [previewDocument, setPreviewDocument] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
+
+  const visibleResults = useMemo(() => {
+    const filtered = results.filter((result) => resultMatchesFilters(result, filters));
+    return [...filtered].sort((a, b) => {
+      if (sortBy === 'date') {
+        return String(b.date || '').localeCompare(String(a.date || ''));
+      }
+      if (sortBy === 'amount') {
+        return Number(b.amount || 0) - Number(a.amount || 0);
+      }
+      return Number(b.score || 0) - Number(a.score || 0);
+    });
+  }, [filters, results, sortBy]);
+
+  const rerunSearch = async (nextFilters) => {
+    if (!searchContext) {
+      return;
+    }
+
+    setIsRefreshing(true);
+    setErrorMsg('');
+
+    try {
+      const options = {
+        topK: Number(searchContext.topK || 10),
+        threshold: Number(searchContext.threshold || threshold) / 100,
+        filters: toApiFilters(nextFilters),
+      };
+      let response;
+
+      if (searchContext.mode === 'select') {
+        response = await findSimilar(searchContext.documentId, options);
+      } else if (searchContext.mode === 'text') {
+        response = await searchSimilarText(searchContext.queryText, options);
+      } else if (searchContext.mode === 'upload' && searchContext.file) {
+        response = await searchSimilar(searchContext.file, options);
+      } else {
+        throw new Error('Original search context is unavailable. Run the search again from the Search screen.');
+      }
+
+      setResults((response.data?.results || []).map(mapResult));
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Unable to refresh search results.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const applyFilters = (nextFilters) => {
+    setFilters(nextFilters);
+    rerunSearch(nextFilters);
+  };
+
+  const clearFilters = () => {
+    setFilters(EMPTY_FILTERS);
+    rerunSearch(EMPTY_FILTERS);
+  };
+
+  const handleDownload = async (result) => {
+    try {
+      const response = await downloadDocumentFile(result.id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.filename || `document-${result.id}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Failed to download document.');
+    }
+  };
 
   return (
     <>
@@ -29,23 +172,22 @@ const SearchResults = () => {
           </button>
           
           <div className="results-summary">
-            <h1 className="page-title">4 Results Found</h1>
+            <h1 className="page-title">{visibleResults.length} Results Found</h1>
             <div className="summary-meta">
-              <span>Query: "Software licensing fees invoice"</span>
+              <span>Query: {queryName}</span>
               <span className="dot-separator">•</span>
-              <span>Threshold: 70%</span>
-              <span className="dot-separator">•</span>
-              <span>0.42s</span>
+              <span>Threshold: {threshold}%</span>
             </div>
           </div>
         </div>
 
         <div className="results-layout">
           <div className="results-sidebar">
-            <FilterSidebar 
-              onApply={() => {}} 
-              onClear={() => {}} 
-              activeCount={0} 
+            <FilterSidebar
+              filters={filters}
+              onApply={applyFilters}
+              onClear={clearFilters}
+              activeCount={activeFilterCount}
             />
           </div>
 
@@ -53,16 +195,27 @@ const SearchResults = () => {
             <div className="results-controls">
               <div className="sort-control">
                 <label>Sort by:</label>
-                <select>
-                  <option>Similarity (High to Low)</option>
-                  <option>Date (Newest First)</option>
-                  <option>Amount (High to Low)</option>
+                <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                  <option value="similarity">Similarity (High to Low)</option>
+                  <option value="date">Date (Newest First)</option>
+                  <option value="amount">Amount (High to Low)</option>
                 </select>
               </div>
             </div>
 
+            {errorMsg && <div className="login-error">{errorMsg}</div>}
+            {isRefreshing && <div className="result-card">Refreshing results...</div>}
+
             <div className="results-list">
-              {results.map((result) => (
+              {!isRefreshing && visibleResults.length === 0 && (
+                <div className="result-card">
+                  <div className="result-info-col">
+                    <h3 className="result-filename">No results to show</h3>
+                    <p>Run a similarity search or adjust your filters to see ranked matches here.</p>
+                  </div>
+                </div>
+              )}
+              {!isRefreshing && visibleResults.map((result) => (
                 <div key={result.id} className="result-card">
                   <div className="result-score-col">
                     <ScoreRing score={result.score} size="lg" />
@@ -81,29 +234,31 @@ const SearchResults = () => {
                       </div>
                       <div className="meta-item">
                         <span className="meta-label">Date:</span>
-                        <span className="meta-value">{result.date}</span>
+                        <span className="meta-value">{result.date || '-'}</span>
                       </div>
                       <div className="meta-item">
                         <span className="meta-label">Amount:</span>
-                        <span className="meta-value monospace">{result.amount}</span>
+                        <span className="meta-value monospace">{formatAmount(result)}</span>
                       </div>
                     </div>
                     
-                    <div className="result-snippet">
-                      <p dangerouslySetInnerHTML={{ __html: result.snippet }}></p>
-                    </div>
+                    {result.snippet && (
+                      <div className="result-snippet">
+                        <p>{result.snippet}</p>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="result-actions-col">
-                    <Button variant="ghost" onClick={() => navigate(`/documents/${result.id}`)}>
+                    <Button variant="ghost" onClick={() => setPreviewDocument({ id: result.id, filename: result.filename })}>
                       <Eye size={16} />
                       <span>View</span>
                     </Button>
-                    <Button variant="ghost" onClick={() => navigate('/documents/compare')}>
+                    <Button variant="ghost" onClick={() => navigate(`/documents/compare?target=${result.id}`)}>
                       <Columns size={16} />
                       <span>Compare</span>
                     </Button>
-                    <Button variant="ghost">
+                    <Button variant="ghost" onClick={() => handleDownload(result)}>
                       <Download size={16} />
                       <span>Download</span>
                     </Button>
@@ -114,6 +269,11 @@ const SearchResults = () => {
           </div>
         </div>
       </div>
+      <DocumentPreviewModal
+        document={previewDocument}
+        isOpen={!!previewDocument}
+        onClose={() => setPreviewDocument(null)}
+      />
     </>
   );
 };

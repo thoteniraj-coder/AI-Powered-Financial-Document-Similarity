@@ -69,7 +69,7 @@ const FileDropZone = ({ onFileSelect, accept = "*", maxSize = 50 * 1024 * 1024 }
         <h3 className="drop-title">Drag & drop your file here</h3>
         <p className="drop-subtitle">or click to browse from your computer</p>
         <div className="drop-meta">
-          <span>Supported: PDF, DOCX, TXT, PNG, JPG</span>
+          <span>Supported: PDF, DOCX, TXT, PNG, JPG, XLSX, XLS</span>
           <span className="dot-separator">•</span>
           <span>Max size: {maxSize / (1024 * 1024)}MB</span>
         </div>

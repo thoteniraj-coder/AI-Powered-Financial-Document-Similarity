@@ -1,0 +1,236 @@
+.document-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: rgba(10, 15, 30, 0.68);
+  backdrop-filter: blur(4px);
+}
+
+.document-preview-modal {
+  width: min(1120px, 100%);
+  height: min(860px, calc(100vh - var(--space-8)));
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--slate-200);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.document-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.document-preview-title-wrap {
+  min-width: 0;
+}
+
+.document-preview-title {
+  margin: 0;
+  color: var(--navy-900);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-preview-type {
+  display: block;
+  margin-top: 2px;
+  color: var(--slate-500);
+  font-size: 12px;
+}
+
+.document-preview-close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--slate-500);
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.document-preview-close:hover {
+  color: var(--navy-900);
+  background-color: var(--slate-100);
+}
+
+.document-preview-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background-color: var(--slate-100);
+  overflow: auto;
+}
+
+.document-popup-frame {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  border: 0;
+  background-color: white;
+}
+
+.document-pdf-scroll {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.document-pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 100%;
+  padding: var(--space-4);
+}
+
+.document-pdf-page {
+  max-width: 100%;
+  background-color: white;
+  border: 1px solid var(--slate-200);
+  box-shadow: var(--shadow-sm);
+}
+
+.document-pdf-page canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.document-popup-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  margin: auto;
+  object-fit: contain;
+  background-color: white;
+}
+
+.document-sheet-preview {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+}
+
+.document-sheet-tabs {
+  display: flex;
+  flex: 0 0 auto;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--slate-200);
+  background-color: var(--slate-50);
+  overflow-x: auto;
+}
+
+.document-sheet-tab {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  color: var(--slate-600);
+  background-color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.document-sheet-tab.active {
+  color: white;
+  border-color: var(--navy-600);
+  background-color: var(--navy-600);
+}
+
+.document-sheet-note {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-4);
+  color: var(--slate-500);
+  border-bottom: 1px solid var(--slate-200);
+  background-color: var(--warning-50, #fff7ed);
+  font-size: 12px;
+}
+
+.document-sheet-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.document-sheet-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  color: var(--slate-700);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+}
+
+.document-sheet-table td {
+  min-width: 120px;
+  max-width: 320px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--slate-200);
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.document-sheet-table tr:first-child td {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--navy-900);
+  background-color: var(--slate-100);
+  font-weight: 700;
+}
+
+.document-popup-state {
+  align-self: center;
+  padding: var(--space-6);
+  color: var(--slate-500);
+  text-align: center;
+}
+
+.document-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--slate-200);
+  background-color: var(--slate-50);
+}
+
+@media (max-width: 768px) {
+  .document-preview-backdrop {
+    padding: var(--space-2);
+  }
+
+  .document-preview-modal {
+    height: calc(100vh - var(--space-4));
+  }
+}
