@@ -25,24 +25,28 @@ public class AuditController {
     @GetMapping
     public ResponseEntity<Page<AuditLog>> getAuditLogs(
             @RequestParam(required = false) Integer userId,
+            @RequestParam(defaultValue = "false") boolean systemActor,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(auditService.getAuditLogs(userId, action, startDate, endDate, pageRequest));
+        return ResponseEntity.ok(auditService.getAuditLogs(userId, systemActor, action, startDate, endDate, q, pageRequest));
     }
 
     @GetMapping("/export")
     public ResponseEntity<String> exportAuditLogs(
             @RequestParam(required = false) Integer userId,
+            @RequestParam(defaultValue = "false") boolean systemActor,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
+            @RequestParam(required = false) String q
     ) {
-        List<AuditLog> logs = auditService.getAuditLogsForExport(userId, action, startDate, endDate);
+        List<AuditLog> logs = auditService.getAuditLogsForExport(userId, systemActor, action, startDate, endDate, q);
         StringBuilder csv = new StringBuilder("timestamp,user_id,action,entity_type,entity_id,ip_address,payload\n");
         for (AuditLog log : logs) {
             csv.append(csv(log.getCreatedAt()))

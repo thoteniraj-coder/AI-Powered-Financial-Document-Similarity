@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, MoreVertical, Eye, FileSearch, Trash2 } from 'lucide-react';
+import { Search, Filter, Eye, FileSearch, Trash2 } from 'lucide-react';
 
 import { StatusBadge } from '../components/common/StatusBadge';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -17,13 +17,22 @@ const Documents = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [previewDocument, setPreviewDocument] = useState(null);
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
 
   const loadDocuments = async (page = pageData.number) => {
     setIsLoading(true);
     setErrorMsg('');
 
     try {
-      const response = await getDocuments({ page, size: 10 });
+      const response = await getDocuments({
+        page,
+        size: 10,
+        q: query.trim() || undefined,
+        documentType: typeFilter || undefined,
+        status: statusFilter || undefined,
+      });
       setDocuments(response.data.content || []);
       setPageData({
         number: response.data.number || 0,
@@ -40,6 +49,17 @@ const Documents = () => {
   useEffect(() => {
     loadDocuments();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => loadDocuments(0), 300);
+    return () => clearTimeout(timer);
+  }, [query, typeFilter, statusFilter]);
+
+  const clearFilters = () => {
+    setQuery('');
+    setTypeFilter('');
+    setStatusFilter('');
+  };
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -94,23 +114,31 @@ const Documents = () => {
         <div className="docs-filter-bar">
           <div className="search-input-wrapper">
             <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Search documents..." className="docs-search-input" />
+            <input
+              type="text"
+              placeholder="Search documents..."
+              className="docs-search-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
           </div>
           <div className="filter-dropdowns">
-            <select className="filter-select">
+            <select className="filter-select" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
               <option value="">All Types</option>
               <option value="invoice">Invoice</option>
               <option value="receipt">Receipt</option>
               <option value="contract">Contract</option>
+              <option value="purchase_order">Purchase Order</option>
+              <option value="bank_statement">Bank Statement</option>
             </select>
-            <select className="filter-select">
+            <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="">All Statuses</option>
               <option value="completed">Completed</option>
               <option value="processing">Processing</option>
               <option value="pending">Pending</option>
               <option value="failed">Failed</option>
             </select>
-            <Button variant="outline"><Filter size={16} /> Filters</Button>
+            <Button variant="outline" onClick={clearFilters}><Filter size={16} /> Clear</Button>
           </div>
         </div>
 
@@ -142,7 +170,13 @@ const Documents = () => {
                   <td className="text-right">
                       <div className="row-actions">
                         <button className="icon-btn" title="View" onClick={() => setPreviewDocument(doc)}><Eye size={16} /></button>
-                        <button className="icon-btn" title="Find Similar" onClick={() => navigate('/search')}><FileSearch size={16} /></button>
+                        <button
+                          className="icon-btn"
+                          title="Find Similar"
+                          onClick={() => navigate('/search', { state: { selectedDocumentId: doc.id } })}
+                        >
+                          <FileSearch size={16} />
+                        </button>
                         <button className="icon-btn" title="Download" onClick={() => handleDownload(doc.id, doc.filename)}>
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         </button>
@@ -158,7 +192,7 @@ const Documents = () => {
               )}
               {!isLoading && documents.length === 0 && (
                 <tr>
-                  <td colSpan="7">No documents uploaded yet.</td>
+                  <td colSpan="7">{query || typeFilter || statusFilter ? 'No documents match your filters.' : 'No documents uploaded yet.'}</td>
                 </tr>
               )}
             </tbody>

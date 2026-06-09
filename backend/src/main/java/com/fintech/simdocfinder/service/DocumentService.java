@@ -23,6 +23,7 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,9 +31,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,6 +75,20 @@ public class DocumentService {
 
     @Transactional
     public DocumentUploadResponse uploadDocument(MultipartFile file, String documentType, String userIdStr, String ipAddress) {
+        return uploadDocument(file, documentType, null, null, null, null, null, null, userIdStr, ipAddress);
+    }
+
+    @Transactional
+    public DocumentUploadResponse uploadDocument(MultipartFile file,
+                                                 String documentType,
+                                                 String vendor,
+                                                 String invoiceNumber,
+                                                 LocalDate invoiceDate,
+                                                 BigDecimal amount,
+                                                 String currency,
+                                                 String department,
+                                                 String userIdStr,
+                                                 String ipAddress) {
         log.info("Starting document upload process for file: {}", file.getOriginalFilename());
         
         User user = null;
@@ -116,13 +133,24 @@ public class DocumentService {
             document = documentRepository.save(document);
 
             // Async processing could be here, doing sync for simplicity
-            processDocument(document, file, user, ipAddress);
+            ProcessingResult processingResult = processDocument(
+                    document,
+                    file,
+                    user,
+                    ipAddress,
+                    vendor,
+                    invoiceNumber,
+                    invoiceDate,
+                    amount,
+                    currency,
+                    department
+            );
 
             return DocumentUploadResponse.builder()
                     .documentId(document.getId())
                     .filename(filename)
-                    .status("completed")
-                    .message("Document processed successfully")
+                    .status(processingResult.status())
+                    .message(processingResult.message())
                     .build();
 
         } catch (IOException e) {
@@ -131,7 +159,16 @@ public class DocumentService {
         }
     }
 
-    private void processDocument(Document document, MultipartFile file, User user, String ipAddress) {
+    private ProcessingResult processDocument(Document document,
+                                             MultipartFile file,
+                                             User user,
+                                             String ipAddress,
+                                             String vendor,
+                                             String invoiceNumber,
+                                             LocalDate invoiceDate,
+                                             BigDecimal amount,
+                                             String currency,
+                                             String department) {
         try {
             ParserService.ParserResult parserResult = parserService.parseFile(file);
             document.setPageCount(parserResult.pageCount());
@@ -144,6 +181,7 @@ public class DocumentService {
             }
 
             DocumentMetadata metadata = metadataExtractionService.extractMetadata(cleanedText);
+            applyUploadedMetadata(metadata, vendor, invoiceNumber, invoiceDate, amount, currency, department);
             metadata.setDocument(document);
             metadata.setCreatedAt(LocalDateTime.now());
             metadata.setUpdatedAt(LocalDateTime.now());
@@ -188,21 +226,173 @@ public class DocumentService {
             duplicateDetectionService.checkForDuplicates(document, chunks.get(0), embeddings.get(0), metadata);
             fraudDetectionService.checkForAnomalies(document, metadata);
 
+            return new ProcessingResult("completed", "Document processed successfully");
         } catch (Exception e) {
             log.error("Failed to process document {}", document.getId(), e);
             document.setProcessingStatus("failed");
             documentRepository.save(document);
+            auditService.logAction(
+                    user,
+                    "DOCUMENT_UPLOAD_FAILED",
+                    "DOCUMENT",
+                    document.getId().toString(),
+                    "Document processing failed: " + e.getMessage(),
+                    ipAddress
+            );
+            return new ProcessingResult("failed", "Document processing failed: " + e.getMessage());
+        }
+    }
+
+    private record ProcessingResult(String status, String message) {}
+
+    private void applyUploadedMetadata(DocumentMetadata metadata,
+                                       String vendor,
+                                       String invoiceNumber,
+                                       LocalDate invoiceDate,
+                                       BigDecimal amount,
+                                       String currency,
+                                       String department) {
+        if (hasText(vendor)) {
+            metadata.setVendor(vendor.trim());
+        }
+        if (hasText(invoiceNumber)) {
+            metadata.setInvoiceNumber(invoiceNumber.trim());
+        }
+        if (invoiceDate != null) {
+            metadata.setInvoiceDate(invoiceDate);
+        }
+        if (amount != null) {
+            metadata.setTotalAmount(amount);
+        }
+        if (hasText(currency)) {
+            metadata.setCurrency(currency.trim().toUpperCase());
+        }
+        if (hasText(department)) {
+            metadata.setDepartment(department.trim());
         }
     }
 
     public Page<DocumentResponse> getDocuments(Pageable pageable, Integer days) {
-        if (days != null) {
-            LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
-            return documentRepository.findByIsDeletedFalseAndCreatedAtAfter(cutoff, pageable)
-                    .map(this::mapToResponse);
-        }
-        return documentRepository.findByIsDeletedFalse(pageable)
+        return getDocuments(pageable, days, null, null, null, null, null, null, null, null, null);
+    }
+
+    public Page<DocumentResponse> getDocuments(Pageable pageable,
+                                               Integer days,
+                                               String query,
+                                               String documentType,
+                                               String status,
+                                               String vendor,
+                                               LocalDate dateFrom,
+                                               LocalDate dateTo,
+                                               BigDecimal amountMin,
+                                               BigDecimal amountMax,
+                                               String currency) {
+        return documentRepository.findAll(
+                        documentSpec(days, query, documentType, status, vendor, dateFrom, dateTo, amountMin, amountMax, currency),
+                        pageable
+                )
                 .map(this::mapToResponse);
+    }
+
+    private Specification<Document> documentSpec(Integer days,
+                                                 String query,
+                                                 String documentType,
+                                                 String status,
+                                                 String vendor,
+                                                 LocalDate dateFrom,
+                                                 LocalDate dateTo,
+                                                 BigDecimal amountMin,
+                                                 BigDecimal amountMax,
+                                                 String currency) {
+        return (root, criteriaQuery, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isFalse(root.get("isDeleted")));
+
+            if (days != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), LocalDateTime.now().minusDays(days)));
+            }
+            if (hasText(documentType)) {
+                predicates.add(cb.equal(cb.lower(root.get("documentType")), documentType.trim().toLowerCase()));
+            }
+            if (hasText(status)) {
+                predicates.add(cb.equal(cb.lower(root.get("processingStatus")), status.trim().toLowerCase()));
+            }
+            if (hasText(query)) {
+                String like = contains(query);
+                jakarta.persistence.criteria.Subquery<Integer> metadataQuery = criteriaQuery.subquery(Integer.class);
+                jakarta.persistence.criteria.Root<DocumentMetadata> meta = metadataQuery.from(DocumentMetadata.class);
+                metadataQuery.select(meta.get("id"))
+                        .where(
+                                cb.equal(meta.get("document").get("id"), root.get("id")),
+                                cb.or(
+                                        cb.like(cb.lower(meta.get("vendor")), like),
+                                        cb.like(cb.lower(meta.get("invoiceNumber")), like),
+                                        cb.like(cb.lower(meta.get("currency")), like)
+                                )
+                        );
+
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("filename")), like),
+                        cb.like(cb.lower(root.get("documentType")), like),
+                        cb.like(cb.lower(root.get("processingStatus")), like),
+                        cb.exists(metadataQuery)
+                ));
+            }
+
+            addMetadataFilters(criteriaQuery, root, cb, predicates, vendor, dateFrom, dateTo, amountMin, amountMax, currency);
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
+    private void addMetadataFilters(jakarta.persistence.criteria.CriteriaQuery<?> criteriaQuery,
+                                    jakarta.persistence.criteria.Root<Document> root,
+                                    jakarta.persistence.criteria.CriteriaBuilder cb,
+                                    List<jakarta.persistence.criteria.Predicate> predicates,
+                                    String vendor,
+                                    LocalDate dateFrom,
+                                    LocalDate dateTo,
+                                    BigDecimal amountMin,
+                                    BigDecimal amountMax,
+                                    String currency) {
+        if (!hasText(vendor) && dateFrom == null && dateTo == null && amountMin == null && amountMax == null && !hasText(currency)) {
+            return;
+        }
+
+        jakarta.persistence.criteria.Subquery<Integer> metadataQuery = criteriaQuery.subquery(Integer.class);
+        jakarta.persistence.criteria.Root<DocumentMetadata> meta = metadataQuery.from(DocumentMetadata.class);
+        List<jakarta.persistence.criteria.Predicate> metadataPredicates = new ArrayList<>();
+        metadataPredicates.add(cb.equal(meta.get("document").get("id"), root.get("id")));
+
+        if (hasText(vendor)) {
+            metadataPredicates.add(cb.like(cb.lower(meta.get("vendor")), contains(vendor)));
+        }
+        if (dateFrom != null) {
+            metadataPredicates.add(cb.greaterThanOrEqualTo(meta.get("invoiceDate"), dateFrom));
+        }
+        if (dateTo != null) {
+            metadataPredicates.add(cb.lessThanOrEqualTo(meta.get("invoiceDate"), dateTo));
+        }
+        if (amountMin != null) {
+            metadataPredicates.add(cb.greaterThanOrEqualTo(meta.get("totalAmount"), amountMin));
+        }
+        if (amountMax != null) {
+            metadataPredicates.add(cb.lessThanOrEqualTo(meta.get("totalAmount"), amountMax));
+        }
+        if (hasText(currency)) {
+            metadataPredicates.add(cb.equal(cb.lower(meta.get("currency")), currency.trim().toLowerCase()));
+        }
+
+        metadataQuery.select(meta.get("id"))
+                .where(metadataPredicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        predicates.add(cb.exists(metadataQuery));
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    private String contains(String value) {
+        return "%" + value.trim().toLowerCase() + "%";
     }
 
     public DocumentResponse getDocumentById(UUID id) {
@@ -291,8 +481,18 @@ public class DocumentService {
             
             if (resource.exists() || resource.isReadable()) {
                 String contentType = document.getFileType();
-                if (contentType == null || contentType.isEmpty()) {
-                    contentType = "application/octet-stream";
+                if (contentType == null || contentType.isEmpty() || !contentType.contains("/")) {
+                    try {
+                        contentType = Files.probeContentType(path);
+                    } catch (IOException ex) {
+                        // ignore
+                    }
+                    if (contentType == null) {
+                        if ("pdf".equalsIgnoreCase(document.getFileType())) contentType = "application/pdf";
+                        else if ("png".equalsIgnoreCase(document.getFileType())) contentType = "image/png";
+                        else if ("jpg".equalsIgnoreCase(document.getFileType()) || "jpeg".equalsIgnoreCase(document.getFileType())) contentType = "image/jpeg";
+                        else contentType = "application/octet-stream";
+                    }
                 }
                 return org.springframework.http.ResponseEntity.ok()
                         .contentType(org.springframework.http.MediaType.parseMediaType(contentType))

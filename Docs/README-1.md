@@ -11,8 +11,6 @@
   <img alt="Database" src="https://img.shields.io/badge/DB-PostgreSQL%2015-4169E1?logo=postgresql&logoColor=white">
 </p>
 
-👉 **[View the FinDoc-AI System Infographic](Docs/FinDoc-AI-infographic%20(1).html)** *(Download or open this HTML file in your browser for a visual overview of the architecture and flow)*
-
 ---
 
 ## Table of Contents

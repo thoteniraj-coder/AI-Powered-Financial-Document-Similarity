@@ -41,6 +41,7 @@ const DocumentComparison = () => {
   const [sourceDocument, setSourceDocument] = useState(null);
   const [targetDocument, setTargetDocument] = useState(null);
   const [availableDocs, setAvailableDocs] = useState([]);
+  const [documentQuery, setDocumentQuery] = useState('');
   const [isLoading, setIsLoading] = useState(Boolean(sourceId || targetId));
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -71,14 +72,15 @@ const DocumentComparison = () => {
   useEffect(() => {
     const fetchAvailable = async () => {
       try {
-        const res = await getDocuments({ size: 50 });
+        const res = await getDocuments({ size: 50, q: documentQuery.trim() || undefined });
         setAvailableDocs(res.data?.content || []);
       } catch (e) {
         console.error("Failed to load available docs", e);
       }
     };
-    fetchAvailable();
-  }, []);
+    const timer = setTimeout(fetchAvailable, 250);
+    return () => clearTimeout(timer);
+  }, [documentQuery]);
 
   const sourceFields = useMemo(() => buildFields(sourceDocument), [sourceDocument]);
   const targetFields = useMemo(() => buildFields(targetDocument), [targetDocument]);
@@ -159,6 +161,13 @@ const DocumentComparison = () => {
           <div className="empty-icon"><FilePlus size={22} /></div>
           <div className="empty-title">Select a document to compare</div>
           <div className="empty-desc">Choose any document from your library to compare against the other column.</div>
+          <input
+            className="compare-doc-search"
+            type="text"
+            placeholder="Search documents..."
+            value={documentQuery}
+            onChange={(event) => setDocumentQuery(event.target.value)}
+          />
           <label className="select-wrap">
             <select value="" onChange={(e) => handleSelectDocument(e.target.value, isSource)}>
               <option value="">Choose document</option>

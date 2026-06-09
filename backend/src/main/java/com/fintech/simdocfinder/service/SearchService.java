@@ -4,6 +4,7 @@ import com.fintech.simdocfinder.embedding.EmbeddingClient;
 import com.fintech.simdocfinder.model.dto.SearchRequest;
 import com.fintech.simdocfinder.model.dto.SearchResponse;
 import com.fintech.simdocfinder.model.dto.SearchResultItem;
+import com.fintech.simdocfinder.model.dto.SearchTextRequest;
 import com.fintech.simdocfinder.model.entity.*;
 import com.fintech.simdocfinder.parser.ParserService;
 import com.fintech.simdocfinder.repository.DocumentChunkRepository;
@@ -54,61 +55,32 @@ public class SearchService {
             throw new RuntimeException("No valid text found in query document");
         }
 
-        List<float[]> embeddings = embeddingClient.embedBatch(chunks);
-
-        Map<UUID, SearchResultItem> bestMatches = new HashMap<>();
-
-        for (int i = 0; i < embeddings.size(); i++) {
-            float[] queryEmbedding = embeddings.get(i);
-            
-            Filter filter = buildKeywordFilter(request.getFilters());
-
-            List<ScoredPoint> points = qdrantService.searchSimilar(queryEmbedding, request.getTopK() * 2, request.getThreshold(), filter);
-
-            for (ScoredPoint point : points) {
-                if (!payloadMatchesFilters(point, request.getFilters())) {
-                    continue;
-                }
-
-                String docIdStr = point.getPayloadMap().get("document_id").getStringValue();
-                UUID docId = UUID.fromString(docIdStr);
-                
-                String filename = point.getPayloadMap().containsKey("filename") ? point.getPayloadMap().get("filename").getStringValue() : "Unknown";
-                String vendor = point.getPayloadMap().containsKey("vendor") ? point.getPayloadMap().get("vendor").getStringValue() : null;
-                String invoiceNumber = point.getPayloadMap().containsKey("invoice_number") ? point.getPayloadMap().get("invoice_number").getStringValue() : null;
-                String docType = point.getPayloadMap().containsKey("document_type") ? point.getPayloadMap().get("document_type").getStringValue() : null;
-                String chunkText = point.getPayloadMap().containsKey("chunk_text") ? point.getPayloadMap().get("chunk_text").getStringValue() : null;
-                chunkText = piiMaskingService.maskForUser(chunkText, user);
-
-                double score = point.getScore();
-                
-                SearchResultItem item = bestMatches.get(docId);
-                if (item == null || score > item.getSimilarityScore()) {
-                    bestMatches.put(docId, SearchResultItem.builder()
-                            .documentId(docId)
-                            .filename(filename)
-                            .vendor(vendor)
-                            .invoiceNumber(invoiceNumber)
-                            .documentType(docType)
-                            .similarityScore(score)
-                            .matchedSnippet(chunkText)
-                            .matchCategory(getMatchCategory(score))
-                            .build());
-                }
-            }
-        }
-
-        List<SearchResultItem> finalResults = bestMatches.values().stream()
-                .sorted(Comparator.comparing(SearchResultItem::getSimilarityScore).reversed())
-                .limit(request.getTopK())
-                .collect(Collectors.toList());
-
-        for (int i = 0; i < finalResults.size(); i++) {
-            finalResults.get(i).setRank(i + 1);
-        }
+        List<SearchResultItem> finalResults = buildResultsForChunks(chunks, request, user, null);
 
         UUID searchId = saveSearchLog(user, null, request.getThreshold(), finalResults);
         auditService.logAction(user, "DOCUMENT_SEARCH", "SEARCH", searchId.toString(), "Performed similarity search", ipAddress);
+
+        return SearchResponse.builder()
+                .searchId(searchId)
+                .resultCount(finalResults.size())
+                .results(finalResults)
+                .build();
+    }
+
+    public SearchResponse searchSimilarText(SearchTextRequest request, User user, String ipAddress) {
+        log.info("Starting text similarity search");
+
+        String cleanedText = textCleaningService.cleanText(request.getQueryText());
+        List<String> chunks = chunkingService.chunkText(cleanedText);
+
+        if (chunks.isEmpty()) {
+            throw new RuntimeException("No valid text found in query");
+        }
+
+        List<SearchResultItem> finalResults = buildResultsForChunks(chunks, request, user, null);
+
+        UUID searchId = saveSearchLog(user, null, request.getThreshold(), finalResults);
+        auditService.logAction(user, "DOCUMENT_TEXT_SEARCH", "SEARCH", searchId.toString(), "Performed text similarity search", ipAddress);
 
         return SearchResponse.builder()
                 .searchId(searchId)
@@ -132,28 +104,47 @@ public class SearchService {
         chunks.sort(Comparator.comparingInt(DocumentChunk::getChunkIndex));
         List<String> chunkTexts = chunks.stream().map(DocumentChunk::getChunkText).collect(Collectors.toList());
 
-        List<float[]> embeddings = embeddingClient.embedBatch(chunkTexts);
+        List<SearchResultItem> finalResults = buildResultsForChunks(chunkTexts, request, user, documentId);
 
-        // Build filter to exclude the source document from results
-        Filter excludeFilter = qdrantService.buildExcludeDocumentFilter(documentId);
+        UUID searchId = saveSearchLog(user, sourceDoc, request.getThreshold(), finalResults);
+        auditService.logAction(user, "DOCUMENT_FIND_SIMILAR", "DOCUMENT", documentId.toString(),
+                "Find similar for: " + sourceDoc.getFilename(), ipAddress);
 
+        return SearchResponse.builder()
+                .searchId(searchId)
+                .queryDocumentId(documentId)
+                .resultCount(finalResults.size())
+                .results(finalResults)
+                .build();
+    }
+
+    private List<SearchResultItem> buildResultsForChunks(List<String> queryChunks,
+                                                         SearchRequest request,
+                                                         User user,
+                                                         UUID excludeDocumentId) {
+        List<float[]> embeddings = embeddingClient.embedBatch(queryChunks);
         Map<UUID, SearchResultItem> bestMatches = new HashMap<>();
+        Filter filter = buildSearchFilter(request.getFilters(), excludeDocumentId);
 
-        for (int i = 0; i < embeddings.size(); i++) {
-            float[] queryEmbedding = embeddings.get(i);
-
-            List<ScoredPoint> points = qdrantService.searchSimilar(
-                    queryEmbedding, request.getTopK() * 2, request.getThreshold(), excludeFilter);
+        for (float[] queryEmbedding : embeddings) {
+            List<ScoredPoint> points = qdrantService.searchSimilar(queryEmbedding, request.getTopK() * 2, request.getThreshold(), filter);
 
             for (ScoredPoint point : points) {
+                if (!payloadMatchesFilters(point, request.getFilters())) {
+                    continue;
+                }
+
                 String docIdStr = point.getPayloadMap().get("document_id").getStringValue();
                 UUID docId = UUID.fromString(docIdStr);
 
-                String filename = point.getPayloadMap().containsKey("filename") ? point.getPayloadMap().get("filename").getStringValue() : "Unknown";
-                String vendor = point.getPayloadMap().containsKey("vendor") ? point.getPayloadMap().get("vendor").getStringValue() : null;
-                String invoiceNumber = point.getPayloadMap().containsKey("invoice_number") ? point.getPayloadMap().get("invoice_number").getStringValue() : null;
-                String docType = point.getPayloadMap().containsKey("document_type") ? point.getPayloadMap().get("document_type").getStringValue() : null;
-                String chunkText = point.getPayloadMap().containsKey("chunk_text") ? point.getPayloadMap().get("chunk_text").getStringValue() : null;
+                String filename = payloadString(point, "filename", "Unknown");
+                String vendor = payloadString(point, "vendor", null);
+                String invoiceNumber = payloadString(point, "invoice_number", null);
+                String docType = payloadString(point, "document_type", null);
+                LocalDate invoiceDate = payloadDate(point.getPayloadMap(), "invoice_date");
+                BigDecimal totalAmount = payloadDecimal(point.getPayloadMap(), "total_amount");
+                String currency = payloadString(point, "currency", null);
+                String chunkText = payloadString(point, "chunk_text", null);
                 chunkText = piiMaskingService.maskForUser(chunkText, user);
 
                 double score = point.getScore();
@@ -166,6 +157,9 @@ public class SearchService {
                             .vendor(vendor)
                             .invoiceNumber(invoiceNumber)
                             .documentType(docType)
+                            .invoiceDate(invoiceDate)
+                            .totalAmount(totalAmount)
+                            .currency(currency)
                             .similarityScore(score)
                             .matchedSnippet(chunkText)
                             .matchCategory(getMatchCategory(score))
@@ -183,16 +177,7 @@ public class SearchService {
             finalResults.get(i).setRank(i + 1);
         }
 
-        UUID searchId = saveSearchLog(user, sourceDoc, request.getThreshold(), finalResults);
-        auditService.logAction(user, "DOCUMENT_FIND_SIMILAR", "DOCUMENT", documentId.toString(),
-                "Find similar for: " + sourceDoc.getFilename(), ipAddress);
-
-        return SearchResponse.builder()
-                .searchId(searchId)
-                .queryDocumentId(documentId)
-                .resultCount(finalResults.size())
-                .results(finalResults)
-                .build();
+        return finalResults;
     }
 
     private String getMatchCategory(double score) {
@@ -201,28 +186,29 @@ public class SearchService {
         return "WEAK_MATCH";
     }
 
-    private Filter buildKeywordFilter(SearchRequest.SearchFilters filters) {
-        if (filters == null) {
-            return null;
-        }
-
+    private Filter buildSearchFilter(SearchRequest.SearchFilters filters, UUID excludeDocumentId) {
         Filter.Builder builder = Filter.newBuilder();
         boolean hasFilter = false;
 
-        if (hasText(filters.getVendor())) {
-            builder.addMust(matchKeyword("vendor", filters.getVendor()));
+        if (excludeDocumentId != null) {
+            builder.addMustNot(matchKeyword("document_id", excludeDocumentId.toString()));
             hasFilter = true;
         }
-        if (hasText(filters.getDocumentType())) {
+
+        if (filters != null && hasText(filters.getDocumentType())) {
             builder.addMust(matchKeyword("document_type", filters.getDocumentType()));
             hasFilter = true;
         }
-        if (hasText(filters.getCurrency())) {
+        if (filters != null && hasText(filters.getCurrency())) {
             builder.addMust(matchKeyword("currency", filters.getCurrency()));
             hasFilter = true;
         }
 
         return hasFilter ? builder.build() : null;
+    }
+
+    private String payloadString(ScoredPoint point, String key, String fallback) {
+        return point.getPayloadMap().containsKey(key) ? point.getPayloadMap().get(key).getStringValue() : fallback;
     }
 
     private boolean payloadMatchesFilters(ScoredPoint point, SearchRequest.SearchFilters filters) {
@@ -231,6 +217,13 @@ public class SearchService {
         }
 
         Map<String, io.qdrant.client.grpc.JsonWithInt.Value> payload = point.getPayloadMap();
+
+        if (hasText(filters.getVendor())) {
+            String vendor = payload.containsKey("vendor") ? payload.get("vendor").getStringValue() : null;
+            if (vendor == null || !vendor.toLowerCase().contains(filters.getVendor().trim().toLowerCase())) {
+                return false;
+            }
+        }
 
         if (filters.getAmountMin() != null || filters.getAmountMax() != null) {
             BigDecimal amount = payloadDecimal(payload, "total_amount");

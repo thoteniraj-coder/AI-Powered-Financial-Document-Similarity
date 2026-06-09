@@ -42,11 +42,14 @@ class DocumentServiceTest {
     @Mock private TextCleaningService textCleaningService;
     @Mock private ChunkingService chunkingService;
     @Mock private MetadataExtractionService metadataExtractionService;
+    @Mock private FileValidationService fileValidationService;
+    @Mock private MalwareScanService malwareScanService;
     @Mock private EmbeddingClient embeddingClient;
     @Mock private QdrantService qdrantService;
     @Mock private AuditService auditService;
     @Mock private DuplicateDetectionService duplicateDetectionService;
     @Mock private FraudDetectionService fraudDetectionService;
+    @Mock private PiiMaskingService piiMaskingService;
 
     @InjectMocks
     private DocumentService documentService;
@@ -65,6 +68,8 @@ class DocumentServiceTest {
         user.setEmail("test@test.com");
 
         when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(fileValidationService.validate(file))
+                .thenReturn(new FileValidationService.ValidationResult("test.pdf", "pdf", "pdf"));
         
         Document savedDoc = new Document();
         savedDoc.setId(UUID.randomUUID());
@@ -92,5 +97,43 @@ class DocumentServiceTest {
         verify(qdrantService, times(1)).upsertPoints(any(), anyList(), anyList(), anyList(), anyMap());
         verify(documentChunkRepository, times(1)).save(any());
         verify(auditService, times(1)).logAction(eq(user), eq("DOCUMENT_UPLOAD"), eq("DOCUMENT"), anyString(), anyString(), eq("127.0.0.1"));
+    }
+
+    @Test
+    void uploadDocument_processingFailureReturnsFailedStatusAndAuditsFailure() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "broken.pdf",
+                "application/pdf",
+                "invalid content".getBytes()
+        );
+        User user = new User();
+        user.setId(1);
+        user.setEmail("test@test.com");
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(fileValidationService.validate(file))
+                .thenReturn(new FileValidationService.ValidationResult("broken.pdf", "pdf", "pdf"));
+
+        Document savedDoc = new Document();
+        savedDoc.setId(UUID.randomUUID());
+        savedDoc.setFilename("broken.pdf");
+        savedDoc.setCreatedAt(LocalDateTime.now());
+        when(documentRepository.save(any(Document.class))).thenReturn(savedDoc);
+        when(parserService.parseFile(any())).thenThrow(new RuntimeException("Unable to parse PDF"));
+
+        DocumentUploadResponse response = documentService.uploadDocument(file, "invoice", "1", "127.0.0.1");
+
+        assertEquals("failed", response.getStatus());
+        assertEquals("failed", savedDoc.getProcessingStatus());
+        verify(auditService).logAction(
+                eq(user),
+                eq("DOCUMENT_UPLOAD_FAILED"),
+                eq("DOCUMENT"),
+                eq(savedDoc.getId().toString()),
+                contains("Unable to parse PDF"),
+                eq("127.0.0.1")
+        );
+        verifyNoInteractions(qdrantService);
     }
 }

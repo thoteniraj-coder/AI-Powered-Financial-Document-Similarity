@@ -299,6 +299,24 @@
   font-size: 13px;
 }
 
+.compare-doc-search {
+  width: min(100%, 340px);
+  min-height: 38px;
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-md);
+  background-color: #fff;
+  color: var(--slate-700);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  padding: 0 var(--space-3);
+}
+
+.compare-doc-search:focus {
+  border-color: var(--navy-500);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
 .select-wrap {
   position: relative;
   display: flex;

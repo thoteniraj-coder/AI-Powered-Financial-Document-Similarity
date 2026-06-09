@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, FileText, Upload, Database } from 'lucide-react';
 
 import FileDropZone from '../components/Upload/FileDropZone';
 import FilterSidebar from '../components/Search/FilterSidebar';
 import { Button } from '../components/common/Button';
-import { getDocuments, searchSimilar, findSimilar } from '../api/documents';
+import { getDocuments, searchSimilar, findSimilar, searchSimilarText } from '../api/documents';
 import './Search.css';
 
 const EMPTY_FILTERS = {
@@ -42,6 +42,7 @@ const countActiveFilters = (filters) => {
 
 const Search = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('upload'); // upload, text, select
   const [threshold, setThreshold] = useState(70);
   const [topK, setTopK] = useState(10);
@@ -70,6 +71,13 @@ const Search = () => {
     loadRecentDocuments();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.selectedDocumentId) {
+      setActiveTab('select');
+      setSelectedDocumentId(location.state.selectedDocumentId);
+    }
+  }, [location.state]);
+
   const filteredDocuments = useMemo(() => {
     const query = documentQuery.trim().toLowerCase();
     if (!query) return recentDocuments;
@@ -93,7 +101,7 @@ const Search = () => {
       try {
         const selectedDoc = recentDocuments.find(d => d.id === selectedDocumentId);
         const response = await findSimilar(selectedDocumentId, {
-          topK,
+          topK: Number(topK),
           threshold: Number(threshold) / 100,
           filters: apiFilters,
         });
@@ -102,6 +110,50 @@ const Search = () => {
             response: response.data,
             queryName: selectedDoc?.filename || 'Selected document',
             threshold,
+            searchContext: {
+              mode: 'select',
+              documentId: selectedDocumentId,
+              topK: Number(topK),
+              threshold,
+              filters,
+            },
+          },
+        });
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Search failed. Please try again.');
+      } finally {
+        setIsSearching(false);
+      }
+      return;
+    }
+
+    if (activeTab === 'text') {
+      if (!queryText.trim()) {
+        setErrorMsg('Paste text to run similarity search.');
+        return;
+      }
+
+      setIsSearching(true);
+      setErrorMsg('');
+
+      try {
+        const response = await searchSimilarText(queryText, {
+          topK: Number(topK),
+          threshold: Number(threshold) / 100,
+          filters: apiFilters,
+        });
+        navigate('/search/results', {
+          state: {
+            response: response.data,
+            queryName: 'Pasted text query',
+            threshold,
+            searchContext: {
+              mode: 'text',
+              queryText,
+              topK: Number(topK),
+              threshold,
+              filters,
+            },
           },
         });
       } catch (error) {
@@ -122,7 +174,7 @@ const Search = () => {
 
     try {
       const response = await searchSimilar(queryFile, {
-        topK,
+        topK: Number(topK),
         threshold: Number(threshold) / 100,
         filters: apiFilters,
       });
@@ -131,6 +183,13 @@ const Search = () => {
           response: response.data,
           queryName: queryFile.name,
           threshold,
+          searchContext: {
+            mode: 'upload',
+            file: queryFile,
+            topK: Number(topK),
+            threshold,
+            filters,
+          },
         },
       });
     } catch (error) {

@@ -3,8 +3,12 @@ import client from './client';
 export const uploadDocument = (file, metadata) => {
   const formData = new FormData();
   formData.append('file', file);
-  if (metadata?.documentType) {
-    formData.append('documentType', metadata.documentType);
+  if (metadata) {
+    Object.entries(metadata).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        formData.append(key, value);
+      }
+    });
   }
   return client.post('/documents/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
@@ -16,6 +20,12 @@ export const getDocument = (id) => client.get(`/documents/${id}`);
 export const downloadDocumentFile = (id) => client.get(`/documents/${id}/download`, { responseType: 'blob' });
 export const getSpreadsheetPreview = (id) => client.get(`/documents/${id}/spreadsheet-preview`);
 export const deleteDocument = (id) => client.delete(`/documents/${id}`);
+export const searchSimilarText = (queryText, options) => client.post('/documents/search-text', {
+  queryText,
+  topK: options?.topK,
+  threshold: options?.threshold,
+  filters: options?.filters,
+});
 export const searchSimilar = (file, options) => {
   const formData = new FormData();
   if (file) formData.append('file', file);

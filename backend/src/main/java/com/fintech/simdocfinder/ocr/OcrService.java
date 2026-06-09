@@ -27,14 +27,14 @@ public class OcrService {
             }
 
             Tesseract tesseract = new Tesseract();
-            // Optional: tesseract.setDatapath("/path/to/tessdata");
+            tesseract.setDatapath("/usr/share/tessdata");
             tesseract.setLanguage("eng");
 
             String text = tesseract.doOCR(image);
             log.info("OCR extraction completed successfully");
             return text;
 
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error("OCR failed for file: {}", file.getOriginalFilename(), e);
             return "";
         }
@@ -54,7 +54,7 @@ public class OcrService {
 
             log.info("PDF OCR extraction completed successfully");
             return text.toString();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error("PDF OCR failed for file: {}", file.getOriginalFilename(), e);
             return "";
         }
@@ -62,7 +62,7 @@ public class OcrService {
 
     private Tesseract newTesseract() {
         Tesseract tesseract = new Tesseract();
-        // Optional: tesseract.setDatapath("/path/to/tessdata");
+        tesseract.setDatapath("/usr/share/tessdata");
         tesseract.setLanguage("eng");
         return tesseract;
     }

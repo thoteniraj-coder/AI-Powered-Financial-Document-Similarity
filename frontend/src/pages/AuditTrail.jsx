@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Download, Filter } from 'lucide-react';
+import { Download, Search } from 'lucide-react';
 
 import { Button } from '../components/common/Button';
 import { exportAuditLogs, getAuditLogs } from '../api/audit';
@@ -7,6 +7,7 @@ import './AuditTrail.css';
 
 const AuditTrail = () => {
   const [logs, setLogs] = useState([]);
+  const [pageData, setPageData] = useState({ number: 0, totalElements: 0, totalPages: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -14,61 +15,70 @@ const AuditTrail = () => {
   const [endDate, setEndDate] = useState('');
   const [actionFilter, setActionFilter] = useState('All Actions');
   const [userFilter, setUserFilter] = useState('All Users');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterOptions, setFilterOptions] = useState({ actors: [], actions: [] });
 
-  const actorOptions = [...new Set(logs.map(log => log.actorUserId || 'System'))];
-  const actionOptions = [...new Set(logs.map(log => log.action).filter(Boolean))];
+  const actorOptions = filterOptions.actors;
+  const actionOptions = filterOptions.actions;
+  const hasActiveFilters = Boolean(startDate || endDate || searchQuery.trim() || actionFilter !== 'All Actions' || userFilter !== 'All Users');
 
-  const filteredLogs = logs.filter(log => {
-    let match = true;
-    const logDate = new Date(log.createdAt);
-
-    if (startDate) {
-      const start = new Date(startDate + 'T00:00:00');
-      match = match && logDate >= start;
-    }
-    if (endDate) {
-      const end = new Date(endDate + 'T23:59:59');
-      match = match && logDate <= end;
-    }
-    if (actionFilter !== 'All Actions') {
-      match = match && String(log.action).toUpperCase() === actionFilter.toUpperCase();
-    }
-    if (userFilter !== 'All Users') {
-      const actor = userFilter === 'System' ? 'System' : userFilter.replace('User ', '');
-      match = match && String(log.actorUserId || 'System') === String(actor);
-    }
-    return match;
-  });
-
-  useEffect(() => {
-    const loadLogs = async () => {
-      try {
-        const response = await getAuditLogs();
-        setLogs(response.data?.content || response.data || []);
-      } catch (error) {
-        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load audit logs.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadLogs();
-  }, []);
-
-  const buildServerFilters = () => {
-    const params = {};
+  const buildServerFilters = (page = 0, size = 20) => {
+    const params = { page, size };
     if (startDate) params.startDate = `${startDate}T00:00:00`;
     if (endDate) params.endDate = `${endDate}T23:59:59`;
     if (actionFilter !== 'All Actions') params.action = actionFilter;
-    if (userFilter !== 'All Users' && userFilter !== 'System') {
+    if (userFilter === 'System') {
+      params.systemActor = true;
+    } else if (userFilter !== 'All Users') {
       params.userId = userFilter.replace('User ', '');
     }
+    if (searchQuery.trim()) params.q = searchQuery.trim();
     return params;
   };
 
+  const loadLogs = async (page = 0) => {
+    setIsLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await getAuditLogs(buildServerFilters(page));
+      setLogs(response.data?.content || []);
+      setPageData({
+        number: response.data?.number || 0,
+        totalElements: response.data?.totalElements || 0,
+        totalPages: response.data?.totalPages || 0,
+      });
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Unable to load audit logs.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const response = await getAuditLogs({ page: 0, size: 200 });
+        const optionLogs = response.data?.content || response.data || [];
+        setFilterOptions({
+          actors: [...new Set(optionLogs.map(log => log.actorUserId || 'System'))],
+          actions: [...new Set(optionLogs.map(log => log.action).filter(Boolean))],
+        });
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load audit filter options.');
+      }
+    };
+
+    loadFilterOptions();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => loadLogs(0), 300);
+    return () => clearTimeout(timer);
+  }, [startDate, endDate, actionFilter, userFilter, searchQuery]);
+
   const handleExport = async () => {
     try {
-      const response = await exportAuditLogs(buildServerFilters());
+      const response = await exportAuditLogs(buildServerFilters(0, 2000));
       const blob = new Blob([response.data], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -92,6 +102,16 @@ const AuditTrail = () => {
         </div>
 
         <div className="audit-filters">
+          <div className="search-input-wrapper">
+            <Search size={16} className="search-icon" />
+            <input
+              type="text"
+              className="audit-input"
+              placeholder="Search audit trail..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
           <div className="filter-group">
             <input
               type="date"
@@ -143,7 +163,7 @@ const AuditTrail = () => {
               </tr>
             </thead>
             <tbody>
-              {!isLoading && filteredLogs.map(log => (
+              {!isLoading && logs.map(log => (
                 <tr key={log.id}>
                   <td className="monospace text-sm">{log.createdAt ? new Date(log.createdAt).toLocaleString() : '-'}</td>
                   <td className="font-medium">{log.actorUserId || 'System'}</td>
@@ -158,18 +178,47 @@ const AuditTrail = () => {
                   <td colSpan="6">Loading audit logs...</td>
                 </tr>
               )}
-              {!isLoading && filteredLogs.length === 0 && logs.length > 0 && (
+              {!isLoading && logs.length === 0 && hasActiveFilters && (
                 <tr>
                   <td colSpan="6">No audit events match your filters.</td>
                 </tr>
               )}
-              {!isLoading && logs.length === 0 && (
+              {!isLoading && logs.length === 0 && !hasActiveFilters && (
                 <tr>
                   <td colSpan="6">No audit events recorded yet.</td>
                 </tr>
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="pagination">
+          <span className="pagination-info">Showing {logs.length} of {pageData.totalElements} events</span>
+          <div className="pagination-controls">
+            <button
+              className={`page-btn ${pageData.number === 0 ? 'disabled' : ''}`}
+              disabled={pageData.number === 0}
+              onClick={() => loadLogs(pageData.number - 1)}
+            >
+              Previous
+            </button>
+            {Array.from({ length: pageData.totalPages }, (_, index) => (
+              <button
+                key={index}
+                className={`page-btn ${pageData.number === index ? 'active' : ''}`}
+                onClick={() => loadLogs(index)}
+              >
+                {index + 1}
+              </button>
+            ))}
+            <button
+              className={`page-btn ${pageData.number + 1 >= pageData.totalPages ? 'disabled' : ''}`}
+              disabled={pageData.number + 1 >= pageData.totalPages}
+              onClick={() => loadLogs(pageData.number + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
     </>

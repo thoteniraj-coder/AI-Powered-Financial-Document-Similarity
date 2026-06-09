@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldAlert, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Info, Search } from 'lucide-react';
 
 import { Button } from '../components/common/Button';
 import Modal from '../components/common/Modal';
@@ -14,11 +14,18 @@ const Alerts = () => {
   const [actionComment, setActionComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterOptions, setFilterOptions] = useState({ types: [], statuses: [] });
 
   const loadAlerts = async () => {
     setIsLoading(true);
+    setErrorMsg('');
     try {
-      const response = await getAlerts();
+      const response = await getAlerts({
+        alertType: activeTab === 'ALL' ? undefined : activeTab,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        q: searchQuery.trim() || undefined,
+      });
       setAlerts(response.data || []);
     } catch (error) {
       setErrorMsg(error.response?.data?.message || error.message || 'Unable to load alerts.');
@@ -28,8 +35,49 @@ const Alerts = () => {
   };
 
   useEffect(() => {
-    loadAlerts();
+    const loadOptions = async () => {
+      try {
+        const response = await getAlerts();
+        const allAlerts = response.data || [];
+        setFilterOptions({
+          types: [...new Set(allAlerts.map(a => (a.alertType || '').toUpperCase()).filter(Boolean))],
+          statuses: [...new Set(allAlerts.map(a => (a.status || '').toLowerCase()).filter(Boolean))],
+        });
+      } catch (error) {
+        setErrorMsg(error.response?.data?.message || error.message || 'Unable to load alert filters.');
+      }
+    };
+
+    loadOptions();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(loadAlerts, 300);
+    return () => clearTimeout(timer);
+  }, [activeTab, statusFilter, searchQuery]);
+
+  useEffect(() => {
+    if (activeTab !== 'ALL' && !filterOptions.types.includes(activeTab)) {
+      setActiveTab('ALL');
+    }
+    if (statusFilter !== 'all' && !filterOptions.statuses.includes(statusFilter)) {
+      setStatusFilter('all');
+    }
+  }, [filterOptions, activeTab, statusFilter]);
+
+  const refreshAlertsAndOptions = async () => {
+    await loadAlerts();
+    try {
+      const response = await getAlerts();
+      const allAlerts = response.data || [];
+      setFilterOptions({
+        types: [...new Set(allAlerts.map(a => (a.alertType || '').toUpperCase()).filter(Boolean))],
+        statuses: [...new Set(allAlerts.map(a => (a.status || '').toLowerCase()).filter(Boolean))],
+      });
+    } catch (error) {
+      setErrorMsg(error.response?.data?.message || error.message || 'Unable to refresh alert filters.');
+    }
+  };
 
   const getSeverityIcon = (severity) => {
     switch (severity) {
@@ -50,15 +98,15 @@ const Alerts = () => {
     try {
       await updateAlert(id, { status, comment });
       closeActionModal();
-      await loadAlerts();
+      await refreshAlertsAndOptions();
     } catch (error) {
       setErrorMsg(error.response?.data?.message || error.message || 'Unable to update alert.');
     }
   };
 
   // Build dynamic tab list from actual alertType values in the data
-  const alertTypeOptions = [...new Set(alerts.map(a => (a.alertType || '').toUpperCase()).filter(Boolean))];
-  const statusOptions = [...new Set(alerts.map(a => (a.status || '').toLowerCase()).filter(Boolean))];
+  const alertTypeOptions = filterOptions.types;
+  const statusOptions = filterOptions.statuses;
 
   const formatTabLabel = (type) => {
     return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -73,9 +121,7 @@ const Alerts = () => {
       desc: alert.description,
       status: (alert.status || 'open').toLowerCase(),
       date: alert.createdAt ? new Date(alert.createdAt).toLocaleString() : '-',
-    }))
-    .filter(alert => activeTab === 'ALL' || alert.type === activeTab)
-    .filter(alert => statusFilter === 'all' || alert.status === statusFilter);
+    }));
 
   return (
     <>
@@ -104,6 +150,16 @@ const Alerts = () => {
             ))}
           </div>
           <div className="filter-dropdowns">
+            <div className="search-input-wrapper">
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                className="alerts-select"
+                placeholder="Search alerts..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+              />
+            </div>
             <select className="alerts-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="all">Status: All</option>
               {statusOptions.map(s => (

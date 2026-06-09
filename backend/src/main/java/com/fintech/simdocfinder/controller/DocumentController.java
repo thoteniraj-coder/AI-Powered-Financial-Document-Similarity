@@ -6,6 +6,7 @@ import com.fintech.simdocfinder.model.dto.DocumentResponse;
 import com.fintech.simdocfinder.model.dto.DocumentUploadResponse;
 import com.fintech.simdocfinder.model.dto.SearchRequest;
 import com.fintech.simdocfinder.model.dto.SearchResponse;
+import com.fintech.simdocfinder.model.dto.SearchTextRequest;
 import com.fintech.simdocfinder.model.dto.SpreadsheetPreviewResponse;
 import com.fintech.simdocfinder.model.entity.User;
 import com.fintech.simdocfinder.repository.UserRepository;
@@ -15,6 +16,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +40,12 @@ public class DocumentController {
     public ResponseEntity<DocumentUploadResponse> uploadDocument(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "documentType", required = false, defaultValue = "invoice") String documentType,
+            @RequestParam(value = "vendor", required = false) String vendor,
+            @RequestParam(value = "invoiceNumber", required = false) String invoiceNumber,
+            @RequestParam(value = "invoiceDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate invoiceDate,
+            @RequestParam(value = "amount", required = false) BigDecimal amount,
+            @RequestParam(value = "currency", required = false) String currency,
+            @RequestParam(value = "department", required = false) String department,
             Authentication authentication,
             HttpServletRequest request) {
 
@@ -49,7 +58,21 @@ public class DocumentController {
             if (user != null) userIdStr = user.getId().toString();
         }
 
-        DocumentUploadResponse response = documentService.uploadDocument(file, documentType, userIdStr, request.getRemoteAddr());
+        DocumentUploadResponse response = documentService.uploadDocument(
+                file,
+                documentType,
+                vendor,
+                invoiceNumber,
+                invoiceDate,
+                amount,
+                currency,
+                department,
+                userIdStr,
+                request.getRemoteAddr()
+        );
+        if ("failed".equalsIgnoreCase(response.getStatus())) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(response);
+        }
         return ResponseEntity.ok(response);
     }
 
@@ -57,8 +80,29 @@ public class DocumentController {
     public ResponseEntity<Page<DocumentResponse>> getDocuments(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) Integer days) {
-        Page<DocumentResponse> response = documentService.getDocuments(PageRequest.of(page, size), days);
+            @RequestParam(required = false) Integer days,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String documentType,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String vendor,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) BigDecimal amountMin,
+            @RequestParam(required = false) BigDecimal amountMax,
+            @RequestParam(required = false) String currency) {
+        Page<DocumentResponse> response = documentService.getDocuments(
+                PageRequest.of(page, size),
+                days,
+                q,
+                documentType,
+                status,
+                vendor,
+                dateFrom,
+                dateTo,
+                amountMin,
+                amountMax,
+                currency
+        );
         return ResponseEntity.ok(response);
     }
 
@@ -89,6 +133,16 @@ public class DocumentController {
 
         User user = currentUser(authentication);
         return ResponseEntity.ok(searchService.searchSimilar(queryFile, searchRequest, user, request.getRemoteAddr()));
+    }
+
+    @PostMapping("/search-text")
+    public ResponseEntity<SearchResponse> searchText(
+            @RequestBody SearchTextRequest searchRequest,
+            Authentication authentication,
+            HttpServletRequest request) {
+
+        User user = currentUser(authentication);
+        return ResponseEntity.ok(searchService.searchSimilarText(searchRequest, user, request.getRemoteAddr()));
     }
 
     @PostMapping("/{id}/find-similar")

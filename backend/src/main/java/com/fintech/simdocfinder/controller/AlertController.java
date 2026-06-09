@@ -11,10 +11,12 @@ import com.fintech.simdocfinder.service.AuditService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,18 +31,17 @@ public class AlertController {
 
     @GetMapping
     public ResponseEntity<List<AlertResponse>> getAlerts(
-            @RequestParam(required = false) Integer days) {
-        List<AlertResponse> alerts;
-        if (days != null) {
-            LocalDateTime cutoff = LocalDateTime.now().minusDays(days);
-            alerts = alertRepository.findByCreatedAtAfter(cutoff, Sort.by(Sort.Direction.DESC, "createdAt")).stream()
-                    .map(this::mapToResponse)
-                    .toList();
-        } else {
-            alerts = alertRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
-                    .map(this::mapToResponse)
-                    .toList();
-        }
+            @RequestParam(required = false) Integer days,
+            @RequestParam(required = false) String alertType,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String severity,
+            @RequestParam(required = false) String q) {
+        List<AlertResponse> alerts = alertRepository.findAll(
+                        alertSpec(days, alertType, status, severity, q),
+                        Sort.by(Sort.Direction.DESC, "createdAt")
+                ).stream()
+                .map(this::mapToResponse)
+                .toList();
         return ResponseEntity.ok(alerts);
     }
 
@@ -100,6 +101,38 @@ public class AlertController {
                 .resolvedBy(resolvedBy != null ? resolvedBy.getEmail() : null)
                 .resolvedAt(alert.getResolvedAt())
                 .build();
+    }
+
+    private Specification<Alert> alertSpec(Integer days, String alertType, String status, String severity, String q) {
+        return (root, query, cb) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            if (days != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), LocalDateTime.now().minusDays(days)));
+            }
+            if (hasText(alertType)) {
+                predicates.add(cb.equal(cb.upper(root.get("alertType")), alertType.trim().toUpperCase()));
+            }
+            if (hasText(status)) {
+                predicates.add(cb.equal(cb.lower(root.get("status")), status.trim().toLowerCase()));
+            }
+            if (hasText(severity)) {
+                predicates.add(cb.equal(cb.lower(root.get("severity")), severity.trim().toLowerCase()));
+            }
+            if (hasText(q)) {
+                String like = "%" + q.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("alertType")), like),
+                        cb.like(cb.lower(root.get("severity")), like),
+                        cb.like(cb.lower(root.get("status")), like),
+                        cb.like(cb.lower(root.get("description")), like)
+                ));
+            }
+            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private DocumentResponse mapDocument(Document document) {
